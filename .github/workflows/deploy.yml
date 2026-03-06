@@ -56,6 +56,6 @@ jobs:
             if [ ! -d venv ]; then python3 -m venv venv; fi
             . venv/bin/activate
             pip install -r requirements.txt
-            sudo systemctl restart manifest.service
-            sudo systemctl --no-pager --full status manifest.service
+            sudo -n systemctl restart manifest.service
+            sudo -n systemctl --no-pager --full status manifest.service
           '
