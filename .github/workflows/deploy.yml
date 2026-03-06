@@ -56,6 +56,5 @@ jobs:
             if [ ! -d venv ]; then python3 -m venv venv; fi
             . venv/bin/activate
             pip install -r requirements.txt
-            sudo -n systemctl restart manifest.service
-            sudo -n systemctl --no-pager --full status manifest.service
+            echo "Deploy completed. Restart manifest.service manually on server."
           '

@@ -1,10 +1,23 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 
 const RootLayout = () => {
   const navigate = useNavigate();
+  const fallbackBltapeUrl = "https://blutape.net";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get("return_to");
+    if (returnTo) {
+      sessionStorage.setItem("blutape_return_to", returnTo);
+    }
+  }, []);
+
+  const blutapeUrl = useMemo(() => {
+    return sessionStorage.getItem("blutape_return_to") || fallbackBltapeUrl;
+  }, []);
 
   return (
     <>
@@ -18,7 +31,9 @@ const RootLayout = () => {
         <button
           type="button"
           className="header-launch"
-          onClick={() => toast("blutape routing will be wired soon.")}
+          onClick={() => {
+            window.location.href = blutapeUrl;
+          }}
         >
           Back to blutape
         </button>
