@@ -40,6 +40,17 @@ def parse_optional_cents(value, field_name):
     if cents < 0:
         raise ValueError(f"{field_name} must be >= 0")
     return cents
+
+
+def apply_pricing_status(manifest_row: Manifest) -> None:
+    # Keep completed manifests stable unless explicitly changed by status endpoint.
+    if manifest_row.status == ManifestStatusEnum.COMPLETED:
+        return
+
+    has_unlisted = any(m.listed_price is None for m in manifest_row.machines)
+    manifest_row.status = (
+        ManifestStatusEnum.PENDING if has_unlisted else ManifestStatusEnum.PRICED
+    )
     
     
 
@@ -108,6 +119,16 @@ def upload_raw_manifest():
                 
                 msrp = parse_dollars_to_cents(row.get(header_map["msrp"]))
                 your_cost = parse_dollars_to_cents(row.get(header_map["your_cost"]))
+                listed_price = (
+                    parse_dollars_to_cents(row.get(header_map["listed_price"]))
+                    if "listed_price" in header_map
+                    else None
+                )
+                lowes_price = (
+                    parse_dollars_to_cents(row.get(header_map["lowes_price"]))
+                    if "lowes_price" in header_map
+                    else None
+                )
                 
                 if msrp is None or your_cost is None:
                     raise ValueError(f"Missing required money fields at data line {line_number}")
@@ -120,10 +141,11 @@ def upload_raw_manifest():
                     description=description,
                     msrp=msrp,
                     your_cost=your_cost,
-                    listed_price=None,
-                    lowes_price=None,
+                    listed_price=listed_price,
+                    lowes_price=lowes_price,
                 )
                 db.session.add(machine)
+        apply_pricing_status(manifest_row)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -233,6 +255,7 @@ def create_manual_manifest():
         if line_number == 0:
             raise ValueError("At least one non-empty line item is required")
 
+        apply_pricing_status(manifest_row)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -264,7 +287,17 @@ def download_manifest_template():
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     # Use canonical headers accepted by build_header_map aliases.
-    writer.writerow(["SKU", "Appliance Type", "Description", "MSRP", "Your Cost"])
+    writer.writerow(
+        [
+            "SKU",
+            "Appliance Type",
+            "Description",
+            "MSRP",
+            "Your Cost",
+            "Listed Price",
+            "Lowes Price",
+        ]
+    )
 
     csv_data = buffer.getvalue()
     buffer.close()
@@ -337,6 +370,7 @@ def update_machine_prices():
 
     machine.lowes_price = lowes_price_cents
     machine.listed_price = listed_price_cents
+    apply_pricing_status(manifest_row)
     db.session.commit()
 
     return (
@@ -404,6 +438,7 @@ def update_machine_prices_batch():
     except ValueError as exc:
         return jsonify(success=False, message=str(exc)), 400
 
+    apply_pricing_status(manifest_row)
     db.session.commit()
 
     return (
@@ -478,25 +513,55 @@ def update_manifest_metadata():
 
     if not manifest_id:
         return jsonify(success=False, message="manifest_id is required"), 400
-    if "truck_arrival_date" not in payload:
-        return jsonify(success=False, message="truck_arrival_date is required"), 400
+
+    incoming_manifest_id = payload.get("manifest_id_new")
+    incoming_truck_id = payload.get("truck_id")
+    has_arrival_date = "truck_arrival_date" in payload
+    has_manifest_update = incoming_manifest_id is not None
+    has_truck_update = incoming_truck_id is not None
+
+    if not (has_arrival_date or has_manifest_update or has_truck_update):
+        return (
+            jsonify(
+                success=False,
+                message="At least one of truck_arrival_date, manifest_id_new, or truck_id is required",
+            ),
+            400,
+        )
 
     manifest_row = db.session.query(Manifest).filter_by(manifest_id=manifest_id).first()
     if not manifest_row:
         return jsonify(success=False, message="Manifest not found"), 404
 
-    truck_arrival_date_raw = payload.get("truck_arrival_date")
-    if truck_arrival_date_raw in (None, ""):
-        manifest_row.truck_arrival_date = None
-    else:
-        try:
-            manifest_row.truck_arrival_date = date.fromisoformat(
-                str(truck_arrival_date_raw).strip()
-            )
-        except ValueError:
-            return jsonify(success=False, message="truck_arrival_date must be YYYY-MM-DD or null"), 400
+    if has_manifest_update:
+        next_manifest_id = str(incoming_manifest_id or "").strip()
+        if not next_manifest_id:
+            return jsonify(success=False, message="manifest_id_new must be non-empty"), 400
+        manifest_row.manifest_id = next_manifest_id
 
-    db.session.commit()
+    if has_truck_update:
+        next_truck_id = str(incoming_truck_id or "").strip()
+        if not next_truck_id:
+            return jsonify(success=False, message="truck_id must be non-empty"), 400
+        manifest_row.truck_id = next_truck_id
+
+    if has_arrival_date:
+        truck_arrival_date_raw = payload.get("truck_arrival_date")
+        if truck_arrival_date_raw in (None, ""):
+            manifest_row.truck_arrival_date = None
+        else:
+            try:
+                manifest_row.truck_arrival_date = date.fromisoformat(
+                    str(truck_arrival_date_raw).strip()
+                )
+            except ValueError:
+                return jsonify(success=False, message="truck_arrival_date must be YYYY-MM-DD or null"), 400
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, message="manifest_id already exists"), 409
 
     return (
         jsonify(
@@ -555,8 +620,8 @@ def export_manifest_csv(manifest_pk: int):
             "description",
             "msrp",
             "your_cost",
-            "lowes_price",
             "listed_price",
+            "lowes_price",
         ]
     )
 
@@ -576,8 +641,8 @@ def export_manifest_csv(manifest_pk: int):
                 machine.description,
                 cents_to_decimal_str(machine.msrp) or "",
                 cents_to_decimal_str(machine.your_cost) or "",
-                cents_to_decimal_str(machine.lowes_price) or "",
                 cents_to_decimal_str(machine.listed_price) or "",
+                cents_to_decimal_str(machine.lowes_price) or "",
             ]
         )
 

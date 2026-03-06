@@ -101,3 +101,9 @@
     width: min(94%, 560px);
   }
 }
+
+@media print {
+  .navbar {
+    display: none !important;
+  }
+}

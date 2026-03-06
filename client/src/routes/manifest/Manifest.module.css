@@ -132,6 +132,38 @@
   font-weight: 600;
 }
 
+.idEditors {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  width: min(320px, 100%);
+}
+
+.idEditors label {
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.idEditors input {
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 0.48rem 0.56rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 72, 81, 0.25);
+  background: var(--surface-4);
+}
+
+.idEditors button {
+  margin-top: 0.3rem;
+  width: fit-content;
+  min-height: 0;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
+}
+
 .manifestLineItem {
   border: 1px solid var(--card-border);
   border-radius: 14px;
@@ -241,6 +273,11 @@ form.priceInputs div input {
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
+}
+
+form.priceInputs div input:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 form.priceInputs div input:focus {

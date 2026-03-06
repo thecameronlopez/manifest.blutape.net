@@ -1,10 +1,11 @@
 import styles from "./Manifest.module.css";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FORMAT_PRICE, dollarsToCents } from "../../utils/tools";
 
 const Manifest = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [manifest, setManifest] = useState(null);
@@ -20,6 +21,10 @@ const Manifest = () => {
   const [savingStatus, setSavingStatus] = useState(false);
   const [arrivalDateDraft, setArrivalDateDraft] = useState("");
   const [savingArrivalDate, setSavingArrivalDate] = useState(false);
+  const [manifestIdDraft, setManifestIdDraft] = useState("");
+  const [truckIdDraft, setTruckIdDraft] = useState("");
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [unlockedRows, setUnlockedRows] = useState({});
 
   const setCents = (machineId, field, cents) => {
     const normalized =
@@ -83,6 +88,11 @@ const Manifest = () => {
   const getEffectiveMachineCents = (machine, key) =>
     prices[machine.id]?.[key] ?? machine[key === "lowes_cents" ? "lowes_price" : "listed_price"] ?? null;
 
+  const isRowLocked = (machineId, lowesCents, listedCents) => {
+    const hasSubmittedBoth = lowesCents !== null && listedCents !== null;
+    return hasSubmittedBoth && !unlockedRows[machineId];
+  };
+
   const submitMachinePrices = async ({
     manifestId,
     machineId,
@@ -111,6 +121,7 @@ const Manifest = () => {
       const savedMachine = data.payload.machine;
       setCents(machineId, "lowes_cents", savedMachine.lowes_price ?? null);
       setCents(machineId, "listed_cents", savedMachine.listed_price ?? null);
+      setUnlockedRows((prev) => ({ ...prev, [machineId]: false }));
       toast.success("Prices saved");
     } catch (error) {
       console.error("[PRICE_SAVE_ERROR]:", error);
@@ -149,6 +160,7 @@ const Manifest = () => {
         setCents(machine.id, "lowes_cents", machine.lowes_price ?? null);
         setCents(machine.id, "listed_cents", machine.listed_price ?? null);
       }
+      setUnlockedRows({});
       toast.success("All prices saved");
     } catch (error) {
       console.error("[PRICE_SAVE_ALL_ERROR]:", error);
@@ -222,6 +234,52 @@ const Manifest = () => {
     }
   };
 
+  const submitIdentityMetadata = async () => {
+    if (!manifest?.manifest_id) return;
+    setSavingIdentity(true);
+    try {
+      const response = await fetch("/api/manifest/metadata", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          manifest_id: manifest.manifest_id,
+          manifest_id_new: manifestIdDraft,
+          truck_id: truckIdDraft,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to update manifest/truck");
+      }
+
+      const updatedManifest = data.payload.manifest;
+      setManifest((prev) =>
+        prev
+          ? {
+              ...prev,
+              manifest_id: updatedManifest.manifest_id,
+              truck_id: updatedManifest.truck_id,
+            }
+          : prev,
+      );
+      setManifestIdDraft(updatedManifest.manifest_id || "");
+      setTruckIdDraft(updatedManifest.truck_id || "");
+
+      if (updatedManifest.manifest_id && updatedManifest.manifest_id !== id) {
+        navigate(`/manifest/${updatedManifest.manifest_id}`, { replace: true });
+      }
+
+      toast.success("Manifest/truck updated");
+    } catch (error) {
+      console.error("[IDENTITY_SAVE_ERROR]:", error);
+      toast.error(error.message || "Failed to update manifest/truck");
+    } finally {
+      setSavingIdentity(false);
+    }
+  };
+
   useEffect(() => {
     const gitem = async () => {
       try {
@@ -243,7 +301,10 @@ const Manifest = () => {
         setArrivalDateDraft(
           manifestData.payload.manifest.truck_arrival_date || "",
         );
+        setManifestIdDraft(manifestData.payload.manifest.manifest_id || "");
+        setTruckIdDraft(manifestData.payload.manifest.truck_id || "");
         setStatusOptions(statusData.payload.status_options || []);
+        setUnlockedRows({});
       } catch (error) {
         console.error("[ERROR]: ", error);
         toast.error(error.message);
@@ -316,9 +377,28 @@ const Manifest = () => {
         </div>
       </div>
       <div className={styles.manifestMetaData}>
-        <div>
-          <h2>Manifest# {manifest.manifest_id}</h2>
-          <h2>Truck# {manifest.truck_id}</h2>
+        <div className={styles.idEditors}>
+          <label htmlFor="manifest_id_edit">Manifest#</label>
+          <input
+            id="manifest_id_edit"
+            type="text"
+            value={manifestIdDraft}
+            onChange={(e) => setManifestIdDraft(e.target.value)}
+          />
+          <label htmlFor="truck_id_edit">Truck#</label>
+          <input
+            id="truck_id_edit"
+            type="text"
+            value={truckIdDraft}
+            onChange={(e) => setTruckIdDraft(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={submitIdentityMetadata}
+            disabled={savingIdentity || !manifestIdDraft.trim() || !truckIdDraft.trim()}
+          >
+            {savingIdentity ? "Saving..." : "Save IDs"}
+          </button>
         </div>
         <div>
           <p>Status: {manifest.status}</p>
@@ -343,6 +423,7 @@ const Manifest = () => {
 
         const lowesCents = getEffectiveMachineCents(machine, "lowes_cents");
         const listedCents = getEffectiveMachineCents(machine, "listed_cents");
+        const rowLocked = isRowLocked(machineId, lowesCents, listedCents);
 
         const lowesDraft = prices[machineId]?.lowes_draft ?? "";
         const listedDraft = prices[machineId]?.listed_draft ?? "";
@@ -435,26 +516,6 @@ const Manifest = () => {
               }}
             >
               <div>
-                <label htmlFor={`lowes_price_${machineId}`}>Lowes Price</label>
-                <input
-                  type="text"
-                  id={`lowes_price_${machineId}`}
-                  value={
-                    lowesIsEditing
-                      ? lowesDraft
-                      : lowesCents
-                        ? FORMAT_PRICE(lowesCents)
-                        : ""
-                  }
-                  onFocus={() => startEditing(machineId, "lowes", lowesCents ?? 0)}
-                  onChange={(e) =>
-                    setDraft(machineId, "lowes_draft", e.target.value)
-                  }
-                  onBlur={() => stopEditing(machineId, "lowes")}
-                />
-              </div>
-
-              <div>
                 <label htmlFor={`listed_price_${machineId}`}>
                   Listed Price
                 </label>
@@ -468,6 +529,7 @@ const Manifest = () => {
                         ? FORMAT_PRICE(listedCents)
                         : ""
                   }
+                  disabled={rowLocked}
                   onFocus={() =>
                     startEditing(machineId, "listed", listedCents ?? 0)
                   }
@@ -478,9 +540,41 @@ const Manifest = () => {
                 />
               </div>
 
-              <button type="submit" disabled={!!saving[machineId]}>
-                {saving[machineId] ? "Saving..." : "Submit"}
-              </button>
+              <div>
+                <label htmlFor={`lowes_price_${machineId}`}>Lowes Price</label>
+                <input
+                  type="text"
+                  id={`lowes_price_${machineId}`}
+                  value={
+                    lowesIsEditing
+                      ? lowesDraft
+                      : lowesCents
+                        ? FORMAT_PRICE(lowesCents)
+                        : ""
+                  }
+                  disabled={rowLocked}
+                  onFocus={() => startEditing(machineId, "lowes", lowesCents ?? 0)}
+                  onChange={(e) =>
+                    setDraft(machineId, "lowes_draft", e.target.value)
+                  }
+                  onBlur={() => stopEditing(machineId, "lowes")}
+                />
+              </div>
+
+              {rowLocked ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setUnlockedRows((prev) => ({ ...prev, [machineId]: true }))
+                  }
+                >
+                  Edit
+                </button>
+              ) : (
+                <button type="submit" disabled={!!saving[machineId]}>
+                  {saving[machineId] ? "Saving..." : "Submit"}
+                </button>
+              )}
             </form>
           </div>
         );
@@ -503,8 +597,8 @@ const Manifest = () => {
               <th>Description</th>
               <th>MSRP</th>
               <th>Paid</th>
-              <th>Lowe's</th>
               <th>Listed</th>
+              <th>Lowe's</th>
             </tr>
           </thead>
           <tbody>
@@ -522,8 +616,8 @@ const Manifest = () => {
                   <td>{machine.description}</td>
                   <td>{FORMAT_PRICE(machine.msrp)}</td>
                   <td>{FORMAT_PRICE(machine.your_cost)}</td>
-                  <td>{lowesCents ? FORMAT_PRICE(lowesCents) : "-"}</td>
                   <td>{listedCents ? FORMAT_PRICE(listedCents) : "-"}</td>
+                  <td>{lowesCents ? FORMAT_PRICE(lowesCents) : "-"}</td>
                 </tr>
               );
             })}
