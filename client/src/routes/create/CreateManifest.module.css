@@ -1,0 +1,157 @@
+.createPage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.createForm {
+  width: min(1120px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: linear-gradient(160deg, var(--surface-1), var(--surface-2));
+  box-shadow: var(--shadow-soft);
+}
+
+.createForm button[type="submit"] {
+  width: fit-content;
+}
+
+.headerFieldset {
+  border-radius: 12px;
+  border: 1px solid rgba(56, 72, 81, 0.17);
+  padding: 0.85rem;
+  background: var(--surface-3);
+}
+
+.headerFieldset legend {
+  color: var(--brand-600);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.headerGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.headerGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--ink-700);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.headerGrid input,
+.lineRow input {
+  font: inherit;
+  font-size: 0.95rem;
+  border-radius: 9px;
+  border: 1px solid rgba(56, 72, 81, 0.22);
+  padding: 0.54rem 0.62rem;
+  background: var(--surface-4);
+}
+
+.linesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.linesHeader h2 {
+  font-size: 1.1rem;
+}
+
+.linesHeader button {
+  font-size: 0.84rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.linesTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.linesColumns,
+.lineRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.8fr 0.8fr 0.8fr 0.6fr;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 980px;
+  padding: 0.42rem 0.5rem;
+  box-sizing: border-box;
+}
+
+.linesColumns {
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.lineRow {
+  border-radius: 10px;
+  border: 1px solid rgba(56, 72, 81, 0.14);
+  background: var(--surface-3);
+}
+
+.fieldCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-700);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.removeLineButton {
+  font-size: 0.74rem;
+  padding: 0.45rem 0.4rem;
+  border: 1px solid rgba(132, 23, 23, 0.25);
+  background: rgba(255, 246, 246, 0.95);
+  color: #8f1f1f;
+}
+
+.removeLineButton:hover {
+  background: #9f2727;
+  color: #fff;
+  border-color: #9f2727;
+}
+
+@media (max-width: 980px) {
+  .headerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .linesColumns {
+    display: none;
+  }
+
+  .lineRow {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .fieldLabel {
+    display: inline;
+  }
+}

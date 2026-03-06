@@ -1,0 +1,391 @@
+.manifestPage {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  gap: 1rem;
+  animation: fadeIn 260ms ease;
+}
+
+.manifestActions {
+  --toolbar-control-height: 32px;
+  --toolbar-control-width: 150px;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: stretch;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--surface-3);
+}
+
+.leftActions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: stretch;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metaActions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: stretch;
+  flex-direction: column;
+  width: min(420px, 100%);
+  justify-self: end;
+}
+
+.manifestActions > button,
+.leftActions button,
+.statusActions button,
+.arrivalActions button {
+  height: var(--toolbar-control-height);
+  width: var(--toolbar-control-width);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.statusActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 9px;
+  border: 1px solid rgba(56, 72, 81, 0.16);
+  background: rgba(217, 223, 234, 0.76);
+}
+
+.statusActions label {
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.1rem;
+}
+
+.statusActions select {
+  width: var(--toolbar-control-width);
+  height: var(--toolbar-control-height);
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 72, 81, 0.22);
+  background: var(--surface-4);
+  color: var(--ink-900);
+  font-size: 0.76rem;
+  flex: 0 0 var(--toolbar-control-width);
+}
+
+.arrivalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 9px;
+  border: 1px solid rgba(56, 72, 81, 0.16);
+  background: rgba(217, 223, 234, 0.76);
+}
+
+.arrivalActions label {
+  color: var(--ink-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.1rem;
+}
+
+.arrivalActions input[type="date"] {
+  width: var(--toolbar-control-width);
+  height: var(--toolbar-control-height);
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 72, 81, 0.22);
+  background: var(--surface-4);
+  color: var(--ink-900);
+  font-size: 0.76rem;
+  flex: 0 0 var(--toolbar-control-width);
+}
+
+.manifestMetaData {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: linear-gradient(155deg, var(--surface-1), var(--surface-2));
+  box-shadow: var(--shadow-soft);
+}
+
+.manifestMetaData p {
+  color: var(--ink-700);
+  font-weight: 600;
+}
+
+.manifestLineItem {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  gap: 1rem;
+  background: linear-gradient(160deg, var(--surface-1), var(--surface-2));
+  box-shadow: var(--shadow-soft);
+}
+
+.manifestLineItem h3 span {
+  color: var(--brand-600);
+}
+
+.manifestLineItem h3 span a {
+  color: inherit;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+
+.manifestLineItem h3 span a:hover {
+  color: var(--accent-500);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+.machineDescription {
+  width: 100%;
+  color: var(--ink-700);
+}
+
+.manifestLineItem p.machinePrice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.machinePrice {
+  justify-self: center;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.priceConversions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.priceConversions p {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: linear-gradient(150deg, var(--brand-500), var(--brand-600));
+  color: #f9f9f9;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid color-mix(in oklab, var(--brand-600), #000 24%);
+  border-radius: 12px;
+  font-weight: 700;
+  flex: 1 1 110px;
+  cursor: pointer;
+  transition:
+    filter 140ms ease,
+    transform 140ms ease;
+}
+
+.priceConversions p:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.priceConversions p span {
+  font-weight: 800;
+  color: rgba(249, 249, 249, 0.9);
+}
+
+form.priceInputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+form.priceInputs div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 220px;
+  gap: 0.3rem;
+}
+
+form.priceInputs div input {
+  width: 100%;
+  font-size: 1.02rem;
+  padding: 0.65rem 0.72rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 72, 81, 0.2);
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+form.priceInputs div input:focus {
+  border-color: rgba(23, 133, 141, 0.5);
+  box-shadow: 0 0 0 3px rgba(23, 133, 141, 0.16);
+}
+
+form.priceInputs div label {
+  color: var(--ink-700);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+form.priceInputs button[type="submit"] {
+  height: fit-content;
+  padding: 0.65rem 0.95rem;
+}
+
+.printSheet {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .manifestActions {
+    --toolbar-control-height: 38px;
+    --toolbar-control-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .leftActions,
+  .metaActions {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .leftActions {
+    width: 100%;
+  }
+
+  .metaActions {
+    width: 100%;
+  }
+
+  .statusActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    justify-content: flex-start;
+    padding: 0.45rem;
+  }
+
+  .arrivalActions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    justify-content: flex-start;
+    padding: 0.45rem;
+  }
+
+  .manifestActions > button,
+  .leftActions button,
+  .statusActions button,
+  .arrivalActions button,
+  .statusActions select,
+  .arrivalActions input[type="date"] {
+    width: 100%;
+    flex: none;
+    min-width: 0;
+    max-width: none;
+    height: var(--toolbar-control-height);
+    font-size: 0.84rem;
+    padding: 0.42rem 0.7rem;
+  }
+
+  .manifestMetaData {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  header {
+    display: none;
+  }
+  .manifestActions,
+  .priceConversions,
+  form.priceInputs button[type="submit"] {
+    display: none !important;
+  }
+
+  .manifestMetaData,
+  .manifestLineItem {
+    display: none !important;
+  }
+
+  .printSheet {
+    display: block;
+    color: #000;
+    background: #fff;
+  }
+
+  .printSheet h2 {
+    margin-bottom: 0.25rem;
+  }
+
+  .printSheet p {
+    margin-bottom: 0.2rem;
+    font-size: 0.92rem;
+  }
+
+  .printSheet table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.9rem;
+    font-size: 0.86rem;
+  }
+
+  .printSheet th,
+  .printSheet td {
+    border: 1px solid #444;
+    padding: 0.35rem 0.4rem;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .printSheet th {
+    background: #f1f1f1;
+    font-weight: 700;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

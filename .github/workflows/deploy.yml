@@ -1,0 +1,61 @@
+name: Deploy Manifest Destiny to Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 45.56.74.113 >> ~/.ssh/known_hosts
+
+      - name: Build client
+        shell: bash
+        run: |
+          cd client
+          npm ci
+          VITE_SERVER_URL=https://manifest.blutape.net npm run build
+
+      - name: Package server files
+        shell: bash
+        run: |
+          tar \
+            --exclude='venv' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='deploy.tar.gz' \
+            -czf deploy.tar.gz -C server .
+
+      - name: Upload server package and client build
+        shell: bash
+        run: |
+          scp deploy.tar.gz cameron@45.56.74.113:/var/www/manifest.blutape.net/server/
+          scp -r client/dist/* cameron@45.56.74.113:/var/www/manifest.blutape.net/client/dist/
+
+      - name: Deploy on server
+        shell: bash
+        run: |
+          ssh cameron@45.56.74.113 '
+            set -e
+            cd /var/www/manifest.blutape.net/server
+            tar -xzf deploy.tar.gz
+            if [ ! -d venv ]; then python3 -m venv venv; fi
+            . venv/bin/activate
+            pip install -r requirements.txt
+            sudo systemctl restart manifest.service
+            sudo systemctl --no-pager --full status manifest.service
+          '

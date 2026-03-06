@@ -1,0 +1,72 @@
+.homePage {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 0;
+  padding-top: 1.25rem;
+  animation: fadeIn 260ms ease;
+}
+
+.homePageButtonBlock {
+  width: min(980px, 100%);
+  margin: 2rem auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 0;
+}
+
+.homePageButtonBlock button {
+  min-height: 68px;
+  width: 100%;
+  padding: 0.78rem 1rem;
+  border-radius: 14px;
+  border: 1.5px solid rgba(15, 108, 115, 0.38);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--brand-600);
+  box-shadow: none;
+  font-size: clamp(0.98rem, 0.45vw + 0.88rem, 1.08rem);
+  font-weight: 800;
+}
+
+.homePageButtonBlock button:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--brand-500);
+  color: #0b5258;
+  box-shadow: 0 6px 14px rgba(18, 34, 40, 0.1);
+}
+
+.homePageButtonBlock button:active {
+  box-shadow: 0 2px 8px rgba(24, 41, 49, 0.14);
+}
+
+@media (max-width: 900px) {
+  .homePageButtonBlock {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    width: min(620px, 100%);
+  }
+}
+
+@media (max-width: 720px) {
+  .homePageButtonBlock {
+    grid-template-columns: 1fr;
+    width: min(420px, 100%);
+  }
+
+  .homePageButtonBlock button {
+    border-radius: 12px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
