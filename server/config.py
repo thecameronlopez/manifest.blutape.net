@@ -12,3 +12,5 @@ class Config:
     UPLOAD_ROOT = os.path.join(os.path.dirname(__file__), "data", "uploads")
     ALLOWED_EXTENSIONS = {'csv'}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    BLUTAPE_API_BASE_URL = os.environ.get("BLUTAPE_API_BASE_URL")
+    BLUTAPE_INTEGRATION_KEY = os.environ.get("BLUTAPE_INTEGRATION_KEY")

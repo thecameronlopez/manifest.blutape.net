@@ -5,13 +5,16 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 import csv
 import io
-from datetime import date
+import json
+from datetime import date, timedelta
 from pathlib import Path
+from urllib import error, parse, request as urlrequest
 
 from app.utils.file_settings import resolve_upload_path, ensure_directory
 from app.utils.helpers import build_header_map
 from app.utils.money import parse_dollars_to_cents, cents_to_decimal_str
-from app.models.manifest import ManifestStatusEnum
+from app.models.manifest import ManifestKindEnum, ManifestStatusEnum
+from app.models.machine import MachineEntryKindEnum
 
 
 
@@ -40,6 +43,129 @@ def parse_optional_cents(value, field_name):
     if cents < 0:
         raise ValueError(f"{field_name} must be >= 0")
     return cents
+
+
+def parse_optional_date(value, field_name):
+    if value in (None, ""):
+        return None
+    try:
+        return date.fromisoformat(str(value).strip())
+    except ValueError:
+        raise ValueError(f"{field_name} must be YYYY-MM-DD or null")
+
+
+def coerce_int(value, field_name, *, required=False):
+    if value in (None, ""):
+        if required:
+            raise ValueError(f"{field_name} is required")
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be an integer")
+
+
+def normalize_text(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def build_completion_description(item):
+    provided = normalize_text(item.get("description"))
+    if provided:
+        return provided
+
+    parts = [
+        normalize_text(item.get("brand")),
+        normalize_text(item.get("model")),
+        normalize_text(item.get("form_factor")),
+        normalize_text(item.get("color")),
+    ]
+    description = " ".join(part for part in parts if part)
+    return description or normalize_text(item.get("serial")) or "Completed machine"
+
+
+def previous_workday(reference_date: date) -> date:
+    weekday = reference_date.weekday()
+    if weekday == 0:
+        return reference_date - timedelta(days=2)
+    if weekday == 6:
+        return reference_date - timedelta(days=1)
+    return reference_date - timedelta(days=1)
+
+
+def fetch_blutape_completed_manifest_payload(manifest_date: date):
+    base_url = (MANIFEST_DESTINY.config.get("BLUTAPE_API_BASE_URL") or "").rstrip("/")
+    integration_key = (MANIFEST_DESTINY.config.get("BLUTAPE_INTEGRATION_KEY") or "").strip()
+    if not base_url:
+        raise RuntimeError("BLUTAPE_API_BASE_URL is not configured")
+    if not integration_key:
+        raise RuntimeError("BLUTAPE_INTEGRATION_KEY is not configured")
+
+    query_string = parse.urlencode(
+        {"date": manifest_date.isoformat(), "only_unexported": "true"}
+    )
+    req = urlrequest.Request(
+        f"{base_url}/api/export/completed_manifest?{query_string}",
+        headers={"X-Integration-Key": integration_key},
+        method="GET",
+    )
+
+    try:
+        with urlrequest.urlopen(req, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Blutape export request failed: {exc.code} {detail}") from exc
+    except error.URLError as exc:
+        raise RuntimeError(f"Blutape export request failed: {exc.reason}") from exc
+
+    if not payload.get("success"):
+        raise RuntimeError(payload.get("message") or "Blutape export request failed")
+
+    return payload.get("payload") or {}
+
+
+def acknowledge_blutape_manifest_export(manifest_date: date, manifest_id: str, items: list[dict]):
+    base_url = (MANIFEST_DESTINY.config.get("BLUTAPE_API_BASE_URL") or "").rstrip("/")
+    integration_key = (MANIFEST_DESTINY.config.get("BLUTAPE_INTEGRATION_KEY") or "").strip()
+    if not base_url:
+        raise RuntimeError("BLUTAPE_API_BASE_URL is not configured")
+    if not integration_key:
+        raise RuntimeError("BLUTAPE_INTEGRATION_KEY is not configured")
+
+    body = json.dumps(
+        {
+            "manifest_date": manifest_date.isoformat(),
+            "manifest_id": manifest_id,
+            "items": items,
+        }
+    ).encode("utf-8")
+    req = urlrequest.Request(
+        f"{base_url}/api/export/completed_manifest/ack",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Integration-Key": integration_key,
+        },
+        method="POST",
+    )
+
+    try:
+        with urlrequest.urlopen(req, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Blutape export acknowledge failed: {exc.code} {detail}") from exc
+    except error.URLError as exc:
+        raise RuntimeError(f"Blutape export acknowledge failed: {exc.reason}") from exc
+
+    if not payload.get("success"):
+        raise RuntimeError(payload.get("message") or "Blutape export acknowledge failed")
+
+    return payload.get("payload") or {}
 
 
 def apply_pricing_status(manifest_row: Manifest) -> None:
@@ -96,6 +222,7 @@ def upload_raw_manifest():
             truck_id=truck_id,
             manifest_id=manifest_id,
             manufacturer=manufacturer,
+            manifest_kind=ManifestKindEnum.TRUCK_UPLOAD,
         )
         db.session.add(manifest_row)
         db.session.flush()
@@ -200,6 +327,7 @@ def create_manual_manifest():
             truck_id=truck_id,
             manifest_id=manifest_id,
             manufacturer=manufacturer,
+            manifest_kind=ManifestKindEnum.MANUAL,
         )
         db.session.add(manifest_row)
         db.session.flush()
@@ -309,7 +437,231 @@ def download_manifest_template():
             "Content-Disposition": 'attachment; filename="manifest_template.csv"',
         },
     )
-    
+
+
+def upsert_completed_machines_manifest(payload):
+    manifest_date_raw = payload.get("manifest_date")
+    machines = payload.get("machines")
+    provided_manifest_id = normalize_text(payload.get("manifest_id"))
+
+    if not manifest_date_raw:
+        raise ValueError("manifest_date is required")
+    if not isinstance(machines, list) or not machines:
+        raise ValueError("machines must be a non-empty array")
+
+    manifest_date = parse_optional_date(manifest_date_raw, "manifest_date")
+    manifest_id = provided_manifest_id or f"BLU-COMP-{manifest_date.strftime('%Y%m%d')}"
+    truck_id = f"blutape-completed-{manifest_date.strftime('%Y%m%d')}"
+
+    manifest_row = (
+        db.session.query(Manifest)
+        .filter(
+            Manifest.manifest_kind == ManifestKindEnum.BLUTAPE_COMPLETED_DAILY,
+            Manifest.source_system == "blutape",
+            Manifest.source_date == manifest_date,
+        )
+        .first()
+    )
+
+    if manifest_row is None and provided_manifest_id:
+        manifest_row = db.session.query(Manifest).filter_by(manifest_id=manifest_id).first()
+        if manifest_row and manifest_row.manifest_kind != ManifestKindEnum.BLUTAPE_COMPLETED_DAILY:
+            raise ValueError("manifest_id already belongs to a non-Blutape manifest")
+
+    if manifest_row is None:
+        manifest_row = Manifest(
+            truck_arrival_date=manifest_date,
+            truck_id=truck_id,
+            manifest_id=manifest_id,
+            manufacturer="blutape",
+            manifest_kind=ManifestKindEnum.BLUTAPE_COMPLETED_DAILY,
+            source_system="blutape",
+            source_date=manifest_date,
+        )
+        db.session.add(manifest_row)
+        db.session.flush()
+    else:
+        manifest_row.truck_arrival_date = manifest_date
+        manifest_row.truck_id = truck_id
+        manifest_row.manifest_id = manifest_id
+        manifest_row.manufacturer = "blutape"
+        manifest_row.manifest_kind = ManifestKindEnum.BLUTAPE_COMPLETED_DAILY
+        manifest_row.source_system = "blutape"
+        manifest_row.source_date = manifest_date
+
+    existing_by_source_machine_id = {
+        machine.source_machine_id: machine
+        for machine in manifest_row.machines
+        if machine.source_machine_id is not None
+    }
+    used_machine_ids = set()
+
+    line_number = 0
+    for idx, item in enumerate(machines):
+        if not isinstance(item, dict):
+            raise ValueError(f"machines[{idx}] must be an object")
+
+        source_machine_id = coerce_int(
+            item.get("blutape_machine_id"),
+            f"machines[{idx}].blutape_machine_id",
+            required=True,
+        )
+        source_work_order_id = coerce_int(
+            item.get("blutape_work_order_id"),
+            f"machines[{idx}].blutape_work_order_id",
+        )
+        source_event_id = coerce_int(
+            item.get("blutape_event_id"),
+            f"machines[{idx}].blutape_event_id",
+        )
+        completed_on = parse_optional_date(
+            item.get("completed_on"),
+            f"machines[{idx}].completed_on",
+        )
+
+        serial = normalize_text(item.get("serial"))
+        appliance_type = (
+            normalize_text(item.get("category"))
+            or normalize_text(item.get("appliance_type"))
+            or "unknown"
+        )
+        description = build_completion_description(item)
+
+        line_number += 1
+        machine_row = existing_by_source_machine_id.get(source_machine_id)
+        if machine_row is None:
+            machine_row = Machine(
+                manifest_pk=manifest_row.id,
+                line_number=line_number,
+                entry_kind=MachineEntryKindEnum.BLUTAPE_COMPLETION,
+                source_machine_id=source_machine_id,
+                listed_price=None,
+                lowes_price=None,
+            )
+            db.session.add(machine_row)
+            db.session.flush()
+
+        machine_row.line_number = line_number
+        machine_row.entry_kind = MachineEntryKindEnum.BLUTAPE_COMPLETION
+        machine_row.source_machine_id = source_machine_id
+        machine_row.source_work_order_id = source_work_order_id
+        machine_row.source_event_id = source_event_id
+        machine_row.serial = serial
+        machine_row.brand = normalize_text(item.get("brand"))
+        machine_row.model = normalize_text(item.get("model"))
+        machine_row.vendor = normalize_text(item.get("vendor"))
+        machine_row.condition = normalize_text(item.get("condition"))
+        machine_row.color = normalize_text(item.get("color"))
+        machine_row.form_factor = normalize_text(item.get("form_factor"))
+        machine_row.completed_on = completed_on or manifest_date
+        machine_row.sku = normalize_text(item.get("sku")) or serial or f"machine-{source_machine_id}"
+        machine_row.appliance_type = appliance_type
+        machine_row.description = description
+        machine_row.msrp = parse_optional_cents(
+            item.get("msrp_cents"),
+            f"machines[{idx}].msrp_cents",
+        )
+        machine_row.your_cost = parse_optional_cents(
+            item.get("your_cost_cents"),
+            f"machines[{idx}].your_cost_cents",
+        )
+
+        used_machine_ids.add(machine_row.id)
+
+    stale_rows = [
+        machine
+        for machine in manifest_row.machines
+        if machine.id is not None and machine.id not in used_machine_ids
+    ]
+    for stale_row in stale_rows:
+        db.session.delete(stale_row)
+
+    apply_pricing_status(manifest_row)
+    db.session.commit()
+    return manifest_row, line_number
+
+
+@manifest.post("/completed_machines")
+def build_completed_machines_manifest():
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        manifest_row, line_number = upsert_completed_machines_manifest(payload)
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, message="Manifest ID already exists"), 409
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify(success=False, message=str(exc)), 400
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify(success=False, message=f"Build failed: {exc}"), 500
+
+    return (
+        jsonify(
+            success=True,
+            message="Completed machines manifest built",
+            payload={
+                "manifest": manifest_row.serialize(include_machines=True),
+                "line_items": line_number,
+            },
+        ),
+        201,
+    )
+
+
+@manifest.post("/completed_machines/build_previous_workday")
+def build_previous_workday_manifest():
+    payload = request.get_json(silent=True) or {}
+    source_date_raw = normalize_text(payload.get("source_date"))
+
+    try:
+        source_date = (
+            parse_optional_date(source_date_raw, "source_date")
+            if source_date_raw
+            else previous_workday(date.today())
+        )
+        blutape_payload = fetch_blutape_completed_manifest_payload(source_date)
+        if not (blutape_payload.get("machines") or []):
+            return (
+                jsonify(
+                    success=True,
+                    message="No unexported completed machines found for source_date",
+                    payload={"source_date": source_date.isoformat(), "line_items": 0},
+                ),
+                200,
+            )
+        manifest_row, line_number = upsert_completed_machines_manifest(blutape_payload)
+        acknowledge_blutape_manifest_export(
+            source_date,
+            manifest_row.manifest_id,
+            blutape_payload.get("machines") or [],
+        )
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify(success=False, message=str(exc)), 400
+    except RuntimeError as exc:
+        db.session.rollback()
+        return jsonify(success=False, message=str(exc)), 502
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, message="Manifest ID already exists"), 409
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify(success=False, message=f"Build failed: {exc}"), 500
+
+    return (
+        jsonify(
+            success=True,
+            message="Previous workday manifest built",
+            payload={
+                "source_date": source_date.isoformat(),
+                "manifest": manifest_row.serialize(include_machines=True),
+                "line_items": line_number,
+            },
+        ),
+        201,
+    )
 
 
 @manifest.get("/")
