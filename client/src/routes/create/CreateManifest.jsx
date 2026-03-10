@@ -2,6 +2,7 @@ import styles from "./CreateManifest.module.css";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../AuthContext";
 
 const EMPTY_LINE = {
   sku: "",
@@ -13,6 +14,7 @@ const EMPTY_LINE = {
 
 const CreateManifest = () => {
   const navigate = useNavigate();
+  const { canManage } = useAuth();
   const [header, setHeader] = useState({
     truck_id: "",
     manifest_id: "",
@@ -78,6 +80,19 @@ const CreateManifest = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (!canManage) {
+    return (
+      <div className={styles.createPage}>
+        <form className={styles.createForm}>
+          <p>Only admin users can create manifests.</p>
+          <button type="button" onClick={() => navigate("/search")}>
+            Go To Search
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.createPage}>

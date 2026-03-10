@@ -18,6 +18,11 @@
   padding: 0;
 }
 
+.homePageButtonBlock[data-single="true"] {
+  grid-template-columns: minmax(220px, 320px);
+  justify-content: center;
+}
+
 .homePageButtonBlock button {
   min-height: 68px;
   width: 100%;

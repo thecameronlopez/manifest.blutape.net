@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "manifest_dev_secret")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
@@ -14,3 +14,9 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     BLUTAPE_API_BASE_URL = os.environ.get("BLUTAPE_API_BASE_URL")
     BLUTAPE_INTEGRATION_KEY = os.environ.get("BLUTAPE_INTEGRATION_KEY")
+    MANIFEST_ACCESS_SECRET = (
+        os.environ.get("MANIFEST_ACCESS_SECRET") or BLUTAPE_INTEGRATION_KEY
+    )
+    MANIFEST_ACCESS_TOKEN_MAX_AGE = int(
+        os.environ.get("MANIFEST_ACCESS_TOKEN_MAX_AGE", "300")
+    )

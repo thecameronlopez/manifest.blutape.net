@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "./Navbar.module.css";
+import { useAuth } from "../AuthContext";
 
 const UploadIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -23,7 +24,7 @@ const SearchIcon = () => (
   </svg>
 );
 
-const items = [
+const adminItems = [
   { path: "/", label: "Upload", Icon: UploadIcon },
   { path: "/create-manifest", label: "Create", Icon: CreateIcon },
   { path: "/search", label: "Search", Icon: SearchIcon },
@@ -32,6 +33,10 @@ const items = [
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { canManage } = useAuth();
+  const items = canManage
+    ? adminItems
+    : [{ path: "/search", label: "Search", Icon: SearchIcon }];
 
   return (
     <nav className={styles.navbar} aria-label="Primary">

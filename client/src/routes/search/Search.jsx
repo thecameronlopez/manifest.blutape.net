@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FORMAT_DATE } from "../../utils/tools";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../AuthContext";
 
 const Search = () => {
   const [manifests, setManifests] = useState(null);
@@ -12,6 +13,7 @@ const Search = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [busyKeys, setBusyKeys] = useState({});
   const navi = useNavigate();
+  const { canManage } = useAuth();
 
   const setBusy = (key, value) => {
     setBusyKeys((prev) => ({ ...prev, [key]: value }));
@@ -216,29 +218,39 @@ const Search = () => {
               className={styles.statusControl}
               onClick={(e) => e.stopPropagation()}
             >
-              <select
-                className={`${styles.statusBadgeSelect} ${statusToneClass(statusValue(man))}`}
-                id={`status_${man.id}`}
-                value={statusValue(man)}
-                onChange={(e) =>
-                  setStatusDrafts((prev) => ({ ...prev, [man.id]: e.target.value }))
-                }
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              {statusChanged(man) && (
-                <button
-                  type="button"
-                  className={styles.statusSaveButton}
-                  onClick={(e) => handleSaveStatus(e, man)}
-                  disabled={busy(`status:${man.id}`)}
+              {canManage ? (
+                <>
+                  <select
+                    className={`${styles.statusBadgeSelect} ${statusToneClass(statusValue(man))}`}
+                    id={`status_${man.id}`}
+                    value={statusValue(man)}
+                    onChange={(e) =>
+                      setStatusDrafts((prev) => ({ ...prev, [man.id]: e.target.value }))
+                    }
+                  >
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                  {statusChanged(man) && (
+                    <button
+                      type="button"
+                      className={styles.statusSaveButton}
+                      onClick={(e) => handleSaveStatus(e, man)}
+                      disabled={busy(`status:${man.id}`)}
+                    >
+                      {busy(`status:${man.id}`) ? "Saving..." : "Save"}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span
+                  className={`${styles.statusBadgeSelect} ${statusToneClass(man.status)}`}
                 >
-                  {busy(`status:${man.id}`) ? "Saving..." : "Save"}
-                </button>
+                  {man.status}
+                </span>
               )}
             </div>
           </div>
@@ -292,36 +304,44 @@ const Search = () => {
               >
                 Print
               </button>
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={(e) => handleExportCsv(e, man)}
-              >
-                Export CSV
-              </button>
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={(e) => handleCopyManifestId(e, man)}
-              >
-                Copy ID
-              </button>
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={(e) => handleMarkArrivedToday(e, man)}
-                disabled={busy(`arrive:${man.id}`)}
-              >
-                {busy(`arrive:${man.id}`) ? "Marking..." : "Mark Arrived Today"}
-              </button>
-              <button
-                type="button"
-                className={styles.deleteButton}
-                onClick={(e) => handleDelete(e, man)}
-                disabled={deletingId === man.id}
-              >
-                {deletingId === man.id ? "Deleting..." : "Delete"}
-              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={(e) => handleExportCsv(e, man)}
+                >
+                  Export CSV
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={(e) => handleCopyManifestId(e, man)}
+                >
+                  Copy ID
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={(e) => handleMarkArrivedToday(e, man)}
+                  disabled={busy(`arrive:${man.id}`)}
+                >
+                  {busy(`arrive:${man.id}`) ? "Marking..." : "Mark Arrived Today"}
+                </button>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className={styles.deleteButton}
+                  onClick={(e) => handleDelete(e, man)}
+                  disabled={deletingId === man.id}
+                >
+                  {deletingId === man.id ? "Deleting..." : "Delete"}
+                </button>
+              )}
             </div>
           )}
         </div>

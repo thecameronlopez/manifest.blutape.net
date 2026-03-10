@@ -15,10 +15,17 @@ from app.utils.helpers import build_header_map
 from app.utils.money import parse_dollars_to_cents, cents_to_decimal_str
 from app.models.manifest import ManifestKindEnum, ManifestStatusEnum
 from app.models.machine import MachineEntryKindEnum
+from app.api.auth import manifest_admin_required, manifest_login_required
 
 
 
 manifest = Blueprint("manifest", __name__)
+
+
+@manifest.before_request
+@manifest_login_required
+def require_manifest_session():
+    return None
 
 
 def allowed_filename(filename: str):
@@ -181,6 +188,7 @@ def apply_pricing_status(manifest_row: Manifest) -> None:
     
 
 @manifest.post("/raw_manifest")
+@manifest_admin_required
 def upload_raw_manifest():
     file = request.files.get("manifest")
     if not file or not file.filename:
@@ -300,6 +308,7 @@ def upload_raw_manifest():
 
 
 @manifest.post("/manual_manifest")
+@manifest_admin_required
 def create_manual_manifest():
     payload = request.get_json(silent=True) or {}
 
@@ -586,6 +595,7 @@ def upsert_completed_machines_manifest(payload):
 
 
 @manifest.post("/completed_machines")
+@manifest_admin_required
 def build_completed_machines_manifest():
     payload = request.get_json(silent=True) or {}
 
@@ -618,6 +628,7 @@ def build_completed_machines_manifest():
 
 
 @manifest.post("/completed_machines/build_previous_workday")
+@manifest_admin_required
 def build_previous_workday_manifest():
     payload = request.get_json(silent=True) or {}
     source_date_raw = normalize_text(payload.get("source_date"))
@@ -732,6 +743,7 @@ def manifesto():
 
 
 @manifest.patch("/machine_prices")
+@manifest_admin_required
 def update_machine_prices():
     payload = request.get_json(silent=True) or {}
 
@@ -783,6 +795,7 @@ def update_machine_prices():
 
 
 @manifest.patch("/machine_prices/batch")
+@manifest_admin_required
 def update_machine_prices_batch():
     payload = request.get_json(silent=True) or {}
 
@@ -862,6 +875,7 @@ def get_manifest_status_options():
 
 
 @manifest.patch("/status")
+@manifest_admin_required
 def update_manifest_status():
     payload = request.get_json(silent=True) or {}
     manifest_id = str(payload.get("manifest_id", "")).strip()
@@ -903,6 +917,7 @@ def update_manifest_status():
 
 
 @manifest.patch("/metadata")
+@manifest_admin_required
 def update_manifest_metadata():
     payload = request.get_json(silent=True) or {}
     manifest_id = str(payload.get("manifest_id", "")).strip()
@@ -972,6 +987,7 @@ def update_manifest_metadata():
 
 
 @manifest.delete("/<int:manifest_pk>")
+@manifest_admin_required
 def delete_manifest(manifest_pk: int):
     manifest_row = db.session.get(Manifest, manifest_pk)
     if not manifest_row:

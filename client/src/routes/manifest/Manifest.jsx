@@ -3,11 +3,13 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FORMAT_PRICE, dollarsToCents } from "../../utils/tools";
+import { useAuth } from "../../AuthContext";
 
 const Manifest = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const { canManage } = useAuth();
   const [manifest, setManifest] = useState(null);
 
   // prices[machineId] = { lowes_cents, listed_cents, lowes_draft?, listed_draft? }
@@ -335,74 +337,86 @@ const Manifest = () => {
           <button type="button" onClick={printManifest}>
             Print Manifest Sheet
           </button>
-          <button
-            type="button"
-            onClick={submitAllMachinePrices}
-            disabled={savingAll}
-          >
-            {savingAll ? "Saving All..." : "Save All Prices"}
-          </button>
-        </div>
-        <div className={styles.metaActions}>
-          <div className={styles.statusActions}>
-            <label htmlFor="manifest_status">Status</label>
-            <select
-              id="manifest_status"
-              value={statusDraft}
-              onChange={(e) => setStatusDraft(e.target.value)}
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+          {canManage && (
             <button
               type="button"
-              onClick={submitManifestStatus}
-              disabled={savingStatus || !statusDraft}
+              onClick={submitAllMachinePrices}
+              disabled={savingAll}
             >
-              {savingStatus ? "Saving Status..." : "Save Status"}
+              {savingAll ? "Saving All..." : "Save All Prices"}
             </button>
-          </div>
-          <div className={styles.arrivalActions}>
-            <label htmlFor="truck_arrival_date">Arrival</label>
-            <input
-              type="date"
-              id="truck_arrival_date"
-              value={arrivalDateDraft}
-              onChange={(e) => setArrivalDateDraft(e.target.value)}
-            />
-            <button type="button" onClick={submitArrivalDate} disabled={savingArrivalDate}>
-              {savingArrivalDate ? "Saving Date..." : "Save Date"}
-            </button>
-          </div>
+          )}
         </div>
+        {canManage && (
+          <div className={styles.metaActions}>
+            <div className={styles.statusActions}>
+              <label htmlFor="manifest_status">Status</label>
+              <select
+                id="manifest_status"
+                value={statusDraft}
+                onChange={(e) => setStatusDraft(e.target.value)}
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={submitManifestStatus}
+                disabled={savingStatus || !statusDraft}
+              >
+                {savingStatus ? "Saving Status..." : "Save Status"}
+              </button>
+            </div>
+            <div className={styles.arrivalActions}>
+              <label htmlFor="truck_arrival_date">Arrival</label>
+              <input
+                type="date"
+                id="truck_arrival_date"
+                value={arrivalDateDraft}
+                onChange={(e) => setArrivalDateDraft(e.target.value)}
+              />
+              <button type="button" onClick={submitArrivalDate} disabled={savingArrivalDate}>
+                {savingArrivalDate ? "Saving Date..." : "Save Date"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       <div className={styles.manifestMetaData}>
-        <div className={styles.idEditors}>
-          <label htmlFor="manifest_id_edit">Manifest#</label>
-          <input
-            id="manifest_id_edit"
-            type="text"
-            value={manifestIdDraft}
-            onChange={(e) => setManifestIdDraft(e.target.value)}
-          />
-          <label htmlFor="truck_id_edit">Truck#</label>
-          <input
-            id="truck_id_edit"
-            type="text"
-            value={truckIdDraft}
-            onChange={(e) => setTruckIdDraft(e.target.value)}
-          />
-          <button
-            type="button"
-            onClick={submitIdentityMetadata}
-            disabled={savingIdentity || !manifestIdDraft.trim() || !truckIdDraft.trim()}
-          >
-            {savingIdentity ? "Saving..." : "Save IDs"}
-          </button>
-        </div>
+        {canManage ? (
+          <div className={styles.idEditors}>
+            <label htmlFor="manifest_id_edit">Manifest#</label>
+            <input
+              id="manifest_id_edit"
+              type="text"
+              value={manifestIdDraft}
+              onChange={(e) => setManifestIdDraft(e.target.value)}
+            />
+            <label htmlFor="truck_id_edit">Truck#</label>
+            <input
+              id="truck_id_edit"
+              type="text"
+              value={truckIdDraft}
+              onChange={(e) => setTruckIdDraft(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={submitIdentityMetadata}
+              disabled={savingIdentity || !manifestIdDraft.trim() || !truckIdDraft.trim()}
+            >
+              {savingIdentity ? "Saving..." : "Save IDs"}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p>Manifest#: {manifest.manifest_id}</p>
+            <p>Truck#: {manifest.truck_id || "Unknown"}</p>
+            <p>Manufacturer: {manifest.manufacturer}</p>
+          </div>
+        )}
         <div>
           <p>Status: {manifest.status}</p>
           <p>Machines: {manifest.machines.length}</p>
@@ -455,56 +469,58 @@ const Manifest = () => {
               <span>Paid: {FORMAT_PRICE(machine.your_cost)}</span>
             </p>
 
-            <div className={styles.priceConversions}>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_75)
-                }
-              >
-                <span>75%</span>
-                {FORMAT_PRICE(machine.markup_75)}
-              </p>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_100)
-                }
-              >
-                <span>100%</span>
-                {FORMAT_PRICE(machine.markup_100)}
-              </p>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_125)
-                }
-              >
-                <span>125%</span>
-                {FORMAT_PRICE(machine.markup_125)}
-              </p>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_150)
-                }
-              >
-                <span>150%</span>
-                {FORMAT_PRICE(machine.markup_150)}
-              </p>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_175)
-                }
-              >
-                <span>175%</span>
-                {FORMAT_PRICE(machine.markup_175)}
-              </p>
-              <p
-                onClick={() =>
-                  setCents(machineId, "listed_cents", machine.markup_200)
-                }
-              >
-                <span>200%</span>
-                {FORMAT_PRICE(machine.markup_200)}
-              </p>
-            </div>
+            {canManage && (
+              <div className={styles.priceConversions}>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_75)
+                  }
+                >
+                  <span>75%</span>
+                  {FORMAT_PRICE(machine.markup_75)}
+                </p>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_100)
+                  }
+                >
+                  <span>100%</span>
+                  {FORMAT_PRICE(machine.markup_100)}
+                </p>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_125)
+                  }
+                >
+                  <span>125%</span>
+                  {FORMAT_PRICE(machine.markup_125)}
+                </p>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_150)
+                  }
+                >
+                  <span>150%</span>
+                  {FORMAT_PRICE(machine.markup_150)}
+                </p>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_175)
+                  }
+                >
+                  <span>175%</span>
+                  {FORMAT_PRICE(machine.markup_175)}
+                </p>
+                <p
+                  onClick={() =>
+                    setCents(machineId, "listed_cents", machine.markup_200)
+                  }
+                >
+                  <span>200%</span>
+                  {FORMAT_PRICE(machine.markup_200)}
+                </p>
+              </div>
+            )}
 
             <form
               className={styles.priceInputs}
@@ -532,14 +548,18 @@ const Manifest = () => {
                         ? FORMAT_PRICE(listedCents)
                         : ""
                   }
-                  disabled={rowLocked}
-                  onFocus={() =>
-                    startEditing(machineId, "listed", listedCents ?? 0)
-                  }
+                  disabled={!canManage || rowLocked}
+                  onFocus={() => {
+                    if (!canManage) return;
+                    startEditing(machineId, "listed", listedCents ?? 0);
+                  }}
                   onChange={(e) =>
                     setDraft(machineId, "listed_draft", e.target.value)
                   }
-                  onBlur={() => stopEditing(machineId, "listed")}
+                  onBlur={() => {
+                    if (!canManage) return;
+                    stopEditing(machineId, "listed");
+                  }}
                 />
               </div>
 
@@ -555,29 +575,36 @@ const Manifest = () => {
                         ? FORMAT_PRICE(lowesCents)
                         : ""
                   }
-                  disabled={rowLocked}
-                  onFocus={() => startEditing(machineId, "lowes", lowesCents ?? 0)}
+                  disabled={!canManage || rowLocked}
+                  onFocus={() => {
+                    if (!canManage) return;
+                    startEditing(machineId, "lowes", lowesCents ?? 0);
+                  }}
                   onChange={(e) =>
                     setDraft(machineId, "lowes_draft", e.target.value)
                   }
-                  onBlur={() => stopEditing(machineId, "lowes")}
+                  onBlur={() => {
+                    if (!canManage) return;
+                    stopEditing(machineId, "lowes");
+                  }}
                 />
               </div>
 
-              {rowLocked ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setUnlockedRows((prev) => ({ ...prev, [machineId]: true }))
-                  }
-                >
-                  Edit
-                </button>
-              ) : (
-                <button type="submit" disabled={!!saving[machineId]}>
-                  {saving[machineId] ? "Saving..." : "Submit"}
-                </button>
-              )}
+              {canManage &&
+                (rowLocked ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setUnlockedRows((prev) => ({ ...prev, [machineId]: true }))
+                    }
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <button type="submit" disabled={!!saving[machineId]}>
+                    {saving[machineId] ? "Saving..." : "Submit"}
+                  </button>
+                ))}
             </form>
           </div>
         );

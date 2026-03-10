@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { FORMAT_DATE } from "../../utils/tools";
+import { useAuth } from "../../AuthContext";
 
 const NewManifest = () => {
   const navigate = useNavigate();
+  const { canManage } = useAuth();
   const [formData, setFormData] = useState({
     truck_id: "",
     manifest_id: "",
@@ -187,6 +189,19 @@ const NewManifest = () => {
       setIsBuildingCompleted(false);
     }
   };
+
+  if (!canManage) {
+    return (
+      <div className={styles.newManifestPage}>
+        <div className={styles.newManifestForm}>
+          <p role="alert">Only admin users can create or upload manifests.</p>
+          <button type="button" onClick={() => navigate("/search")}>
+            Go To Search
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.newManifestPage}>
