@@ -22,12 +22,16 @@ const RootLayout = () => {
   return (
     <>
       <header>
-        <img
-          src="/blu-logo-512.png"
-          alt="bluTape logo"
-          className="header-logo"
-          onClick={() => navigate("/")}
-        />
+        <div className="header-brand" onClick={() => navigate("/")}>
+          <img
+            src="/blu-logo-512.png"
+            alt="bluTape logo"
+            className="header-logo"
+          />
+          <div className="header-brand-copy">
+            <strong>Manifest</strong>
+          </div>
+        </div>
         <button
           type="button"
           className="header-launch"
@@ -35,7 +39,7 @@ const RootLayout = () => {
             window.location.href = blutapeUrl;
           }}
         >
-          Back to blutape
+          blutape
         </button>
       </header>
       <main>
