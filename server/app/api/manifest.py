@@ -553,7 +553,12 @@ def upsert_completed_machines_manifest(payload):
         machine_row.color = normalize_text(item.get("color"))
         machine_row.form_factor = normalize_text(item.get("form_factor"))
         machine_row.completed_on = completed_on or manifest_date
-        machine_row.sku = normalize_text(item.get("sku")) or serial or f"machine-{source_machine_id}"
+        machine_row.sku = (
+            normalize_text(item.get("sku"))
+            or normalize_text(item.get("model"))
+            or serial
+            or f"machine-{source_machine_id}"
+        )
         machine_row.appliance_type = appliance_type
         machine_row.description = description
         machine_row.msrp = parse_optional_cents(

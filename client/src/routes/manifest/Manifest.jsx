@@ -88,6 +88,9 @@ const Manifest = () => {
   const getEffectiveMachineCents = (machine, key) =>
     prices[machine.id]?.[key] ?? machine[key === "lowes_cents" ? "lowes_price" : "listed_price"] ?? null;
 
+  const getMachineModelDisplay = (machine) =>
+    machine.model || machine.sku || machine.serial || "-";
+
   const isRowLocked = (machineId, lowesCents, listedCents) => {
     const hasSubmittedBoth = lowesCents !== null && listedCents !== null;
     return hasSubmittedBoth && !unlockedRows[machineId];
@@ -612,7 +615,7 @@ const Manifest = () => {
                 <tr key={`print-${machine.id}`}>
                   <td>{idx + 1}</td>
                   <td>{machine.appliance_type}</td>
-                  <td>{machine.sku}</td>
+                  <td>{getMachineModelDisplay(machine)}</td>
                   <td>{machine.description}</td>
                   <td>{FORMAT_PRICE(machine.msrp)}</td>
                   <td>{FORMAT_PRICE(machine.your_cost)}</td>
