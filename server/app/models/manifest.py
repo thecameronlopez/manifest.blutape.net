@@ -7,6 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 
+def _enum_values(enum_cls):
+    return [member.value for member in enum_cls]
+
+
 class ManifestStatusEnum(str, enum.Enum):
     PENDING = "pending"
     PRICED = "priced"
@@ -31,14 +35,24 @@ class Manifest(Base):
     manufacturer: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 
     status: Mapped[ManifestStatusEnum] = mapped_column(
-        Enum(ManifestStatusEnum, native_enum=False), 
+        Enum(
+            ManifestStatusEnum,
+            native_enum=False,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=ManifestStatusEnum.PENDING, 
         nullable=False,
         index=True
     )
 
     manifest_kind: Mapped[ManifestKindEnum] = mapped_column(
-        Enum(ManifestKindEnum, native_enum=False),
+        Enum(
+            ManifestKindEnum,
+            native_enum=False,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=ManifestKindEnum.TRUCK_UPLOAD,
         nullable=False,
         index=True,

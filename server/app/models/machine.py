@@ -8,6 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 
+def _enum_values(enum_cls):
+    return [member.value for member in enum_cls]
+
+
 class MachineEntryKindEnum(str, enum.Enum):
     INVENTORY = "inventory"
     BLUTAPE_COMPLETION = "blutape_completion"
@@ -36,7 +40,12 @@ class Machine(Base):
     line_number: Mapped[int] = mapped_column(Integer, nullable=False)
 
     entry_kind: Mapped[MachineEntryKindEnum] = mapped_column(
-        Enum(MachineEntryKindEnum, native_enum=False),
+        Enum(
+            MachineEntryKindEnum,
+            native_enum=False,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=MachineEntryKindEnum.INVENTORY,
         nullable=False,
         index=True,
