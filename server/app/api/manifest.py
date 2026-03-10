@@ -587,14 +587,17 @@ def build_completed_machines_manifest():
 
     try:
         manifest_row, line_number = upsert_completed_machines_manifest(payload)
-    except IntegrityError:
+    except IntegrityError as exc:
         db.session.rollback()
-        return jsonify(success=False, message="Manifest ID already exists"), 409
+        MANIFEST_DESTINY.logger.exception("[COMPLETED MACHINES BUILD INTEGRITY ERROR]")
+        return jsonify(success=False, message=f"Integrity error: {exc.orig}"), 409
     except ValueError as exc:
         db.session.rollback()
+        MANIFEST_DESTINY.logger.exception("[COMPLETED MACHINES BUILD VALUE ERROR]")
         return jsonify(success=False, message=str(exc)), 400
     except Exception as exc:
         db.session.rollback()
+        MANIFEST_DESTINY.logger.exception("[COMPLETED MACHINES BUILD ERROR]")
         return jsonify(success=False, message=f"Build failed: {exc}"), 500
 
     return (
@@ -639,15 +642,19 @@ def build_previous_workday_manifest():
         )
     except ValueError as exc:
         db.session.rollback()
+        MANIFEST_DESTINY.logger.exception("[PREVIOUS WORKDAY BUILD VALUE ERROR]")
         return jsonify(success=False, message=str(exc)), 400
     except RuntimeError as exc:
         db.session.rollback()
+        MANIFEST_DESTINY.logger.exception("[PREVIOUS WORKDAY BUILD RUNTIME ERROR]")
         return jsonify(success=False, message=str(exc)), 502
-    except IntegrityError:
+    except IntegrityError as exc:
         db.session.rollback()
-        return jsonify(success=False, message="Manifest ID already exists"), 409
+        MANIFEST_DESTINY.logger.exception("[PREVIOUS WORKDAY BUILD INTEGRITY ERROR]")
+        return jsonify(success=False, message=f"Integrity error: {exc.orig}"), 409
     except Exception as exc:
         db.session.rollback()
+        MANIFEST_DESTINY.logger.exception("[PREVIOUS WORKDAY BUILD ERROR]")
         return jsonify(success=False, message=f"Build failed: {exc}"), 500
 
     return (
