@@ -18,6 +18,65 @@
   box-shadow: var(--shadow-soft);
 }
 
+.completedManifestCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 108, 115, 0.22);
+  background:
+    linear-gradient(135deg, rgba(15, 108, 115, 0.12), rgba(255, 255, 255, 0.74)),
+    var(--surface-3);
+}
+
+.completedManifestCopy h2 {
+  margin: 0 0 0.35rem;
+  color: var(--brand-700);
+  font-size: 1.15rem;
+}
+
+.completedManifestCopy p {
+  margin: 0;
+  color: var(--ink-700);
+  line-height: 1.45;
+}
+
+.completedManifestControls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  justify-content: center;
+}
+
+.completedManifestControls label {
+  color: var(--ink-700);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.completedManifestControls input {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.68rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 72, 81, 0.2);
+  background: var(--surface-4);
+  color: var(--ink-900);
+  outline: none;
+}
+
+.completedManifestControls input:focus {
+  border-color: rgba(23, 133, 141, 0.5);
+  box-shadow: 0 0 0 3px rgba(23, 133, 141, 0.16);
+}
+
+.completedManifestButton {
+  width: 100%;
+}
+
 .templateRow {
   display: flex;
   flex-wrap: wrap;
@@ -147,6 +206,10 @@
 }
 
 @media (max-width: 640px) {
+  .completedManifestCard {
+    grid-template-columns: 1fr;
+  }
+
   .templateRow {
     align-items: stretch;
   }

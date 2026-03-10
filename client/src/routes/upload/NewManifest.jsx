@@ -1,15 +1,19 @@
 import styles from "./NewManifest.module.css";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 const NewManifest = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     truck_id: "",
     manifest_id: "",
     manufacturer: "",
     manifest: null,
   });
+  const [buildSourceDate, setBuildSourceDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBuildingCompleted, setIsBuildingCompleted] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -73,6 +77,46 @@ const NewManifest = () => {
     }
   };
 
+  const handleBuildCompletedManifest = async (e) => {
+    e.preventDefault();
+    const message = buildSourceDate
+      ? `Build completed-machine manifest for ${buildSourceDate}?`
+      : "Build completed-machine manifest for the previous workday?";
+    if (!confirm(message)) return;
+
+    try {
+      setIsBuildingCompleted(true);
+      const response = await fetch(
+        "/api/manifest/completed_machines/build_previous_workday",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source_date: buildSourceDate || null,
+          }),
+        },
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Build failed");
+      }
+
+      if (data.payload?.manifest?.id) {
+        toast.success(`Manifest ${data.payload.manifest.manifest_id} built`);
+        navigate(`/manifest/${data.payload.manifest.id}`);
+        return;
+      }
+
+      toast.success(data.message || "No completed machines found");
+    } catch (buildError) {
+      console.error("[BUILD_COMPLETED_MANIFEST_ERROR]:", buildError);
+      toast.error(buildError.message || "Failed to build completed-machine manifest");
+    } finally {
+      setIsBuildingCompleted(false);
+    }
+  };
+
   return (
     <div className={styles.newManifestPage}>
       <form
@@ -80,6 +124,33 @@ const NewManifest = () => {
         encType="multipart/form-data"
         onSubmit={handleSubmit}
       >
+        <section className={styles.completedManifestCard}>
+          <div className={styles.completedManifestCopy}>
+            <h2>Build From Completed Machines</h2>
+            <p>
+              Leave the date blank to pull the previous workday. Use a specific
+              date only for reruns or backfills.
+            </p>
+          </div>
+          <div className={styles.completedManifestControls}>
+            <label htmlFor="build_source_date">Source Date (Optional)</label>
+            <input
+              id="build_source_date"
+              type="date"
+              value={buildSourceDate}
+              onChange={(e) => setBuildSourceDate(e.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.completedManifestButton}
+              onClick={handleBuildCompletedManifest}
+              disabled={isBuildingCompleted}
+            >
+              {isBuildingCompleted ? "Building..." : "Build Completed Manifest"}
+            </button>
+          </div>
+        </section>
+
         <div className={styles.templateRow}>
           <a
             className={styles.templateButton}
