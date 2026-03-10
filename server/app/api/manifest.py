@@ -675,6 +675,39 @@ def build_previous_workday_manifest():
     )
 
 
+@manifest.get("/completed_machines/count")
+def count_completed_machines():
+    source_date_raw = normalize_text(request.args.get("source_date"))
+
+    try:
+        source_date = (
+            parse_optional_date(source_date_raw, "source_date")
+            if source_date_raw
+            else previous_workday(date.today())
+        )
+        blutape_payload = fetch_blutape_completed_manifest_payload(source_date)
+        machines = blutape_payload.get("machines") or []
+    except ValueError as exc:
+        return jsonify(success=False, message=str(exc)), 400
+    except RuntimeError as exc:
+        MANIFEST_DESTINY.logger.exception("[COMPLETED MACHINES COUNT RUNTIME ERROR]")
+        return jsonify(success=False, message=str(exc)), 502
+    except Exception as exc:
+        MANIFEST_DESTINY.logger.exception("[COMPLETED MACHINES COUNT ERROR]")
+        return jsonify(success=False, message=f"Count failed: {exc}"), 500
+
+    return (
+        jsonify(
+            success=True,
+            payload={
+                "source_date": source_date.isoformat(),
+                "count": len(machines),
+            },
+        ),
+        200,
+    )
+
+
 @manifest.get("/")
 def manifesto():
     limit = int(request.args.get("limit", "1"))

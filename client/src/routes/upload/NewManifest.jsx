@@ -1,7 +1,8 @@
 import styles from "./NewManifest.module.css";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { FORMAT_DATE } from "../../utils/tools";
 
 const NewManifest = () => {
   const navigate = useNavigate();
@@ -14,8 +15,78 @@ const NewManifest = () => {
   const [buildSourceDate, setBuildSourceDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBuildingCompleted, setIsBuildingCompleted] = useState(false);
+  const [completedCountState, setCompletedCountState] = useState({
+    loading: true,
+    count: 0,
+    sourceDate: "",
+    error: "",
+  });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+
+    const loadCompletedCount = async () => {
+      setCompletedCountState((prev) => ({
+        ...prev,
+        loading: true,
+        error: "",
+      }));
+
+      try {
+        const query = buildSourceDate
+          ? `?source_date=${encodeURIComponent(buildSourceDate)}`
+          : "";
+        const response = await fetch(
+          `/api/manifest/completed_machines/count${query}`,
+          {
+            signal: controller.signal,
+          },
+        );
+        const rawText = await response.text();
+        let data = null;
+
+        try {
+          data = rawText ? JSON.parse(rawText) : null;
+        } catch {
+          throw new Error(
+            "Unable to load completed-machine count right now. The API returned an unexpected response.",
+          );
+        }
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "Failed to load completed machine count");
+        }
+
+        if (!active) return;
+
+        setCompletedCountState({
+          loading: false,
+          count: Number(data.payload?.count || 0),
+          sourceDate: data.payload?.source_date || "",
+          error: "",
+        });
+      } catch (countError) {
+        if (countError.name === "AbortError" || !active) return;
+
+        setCompletedCountState({
+          loading: false,
+          count: 0,
+          sourceDate: "",
+          error: countError.message || "Failed to load completed machine count",
+        });
+      }
+    };
+
+    loadCompletedCount();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [buildSourceDate]);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -131,6 +202,21 @@ const NewManifest = () => {
               Leave the date blank to pull the previous workday. Use a specific
               date only for reruns or backfills.
             </p>
+            <p className={styles.completedManifestCount} aria-live="polite">
+              {completedCountState.loading
+                ? "Checking completed machines..."
+                : completedCountState.error
+                  ? completedCountState.error
+                  : `There ${
+                      completedCountState.count === 1 ? "is" : "are"
+                    } currently ${completedCountState.count} machine${
+                      completedCountState.count === 1 ? "" : "s"
+                    } ready for export on ${
+                      completedCountState.sourceDate
+                        ? FORMAT_DATE(completedCountState.sourceDate)
+                        : "the selected date"
+                    }.`}
+            </p>
           </div>
           <div className={styles.completedManifestControls}>
             <label htmlFor="build_source_date">Source Date (Optional)</label>
@@ -151,18 +237,6 @@ const NewManifest = () => {
           </div>
         </section>
 
-        <div className={styles.templateRow}>
-          <a
-            className={styles.templateButton}
-            href="/api/manifest/template.csv"
-            download
-          >
-            Download CSV Template
-          </a>
-          <p>
-            Template columns: SKU, Appliance Type, Description, MSRP, Your Cost
-          </p>
-        </div>
         <fieldset>
           <legend>New Manifest</legend>
           <div>
@@ -212,6 +286,19 @@ const NewManifest = () => {
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Submit"}
         </button>
+
+        <div className={styles.templateRow}>
+          <a
+            className={styles.templateButton}
+            href="/api/manifest/template.csv"
+            download
+          >
+            Download CSV Template
+          </a>
+          <p>
+            Template columns: SKU, Appliance Type, Description, MSRP, Your Cost
+          </p>
+        </div>
 
         {error && <p role="alert">{error}</p>}
         {success && <p>{success}</p>}
