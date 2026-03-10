@@ -539,7 +539,6 @@ def upsert_completed_machines_manifest(payload):
                 lowes_price=None,
             )
             db.session.add(machine_row)
-            db.session.flush()
 
         machine_row.line_number = line_number
         machine_row.entry_kind = MachineEntryKindEnum.BLUTAPE_COMPLETION
