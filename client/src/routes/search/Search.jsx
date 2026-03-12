@@ -105,7 +105,11 @@ const Search = () => {
 
   const handlePrint = (e, man) => {
     e.stopPropagation();
-    window.open(`/manifest/${man.id}?print=1`, "_blank", "noopener,noreferrer");
+    window.open(
+      `/manifest/${encodeURIComponent(man.manifest_id)}?print=1`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const handleCopyManifestId = async (e, man) => {
@@ -273,7 +277,7 @@ const Search = () => {
             <button
               type="button"
               className={styles.actionButton}
-              onClick={() => navi(`/manifest/${man.id}`)}
+              onClick={() => navi(`/manifest/${encodeURIComponent(man.manifest_id)}`)}
             >
               Open
             </button>
