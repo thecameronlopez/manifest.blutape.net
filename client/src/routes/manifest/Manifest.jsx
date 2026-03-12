@@ -647,12 +647,13 @@ const Manifest = () => {
               </div>
 
               {canManage &&
-                (rowLocked ? (
+                (rowLocked || (!rowIsEditing && !rowIsDirty) ? (
                   <button
                     type="button"
                     onClick={() =>
                       setUnlockedRows((prev) => ({ ...prev, [machineId]: true }))
                     }
+                    disabled={!!saving[machineId]}
                   >
                     Edit
                   </button>
