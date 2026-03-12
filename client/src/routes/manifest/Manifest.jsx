@@ -98,8 +98,8 @@ const Manifest = () => {
 
   const isRowLocked = (machine, lowesCents, listedCents, rowIsEditing, rowIsDirty) => {
     const hasSubmittedBoth =
-      getPersistedMachineCents(machine, "lowes_cents") !== null &&
-      getPersistedMachineCents(machine, "listed_cents") !== null;
+      (getPersistedMachineCents(machine, "lowes_cents") ?? 0) > 0 &&
+      (getPersistedMachineCents(machine, "listed_cents") ?? 0) > 0;
     return (
       hasSubmittedBoth &&
       !unlockedRows[machine.id] &&
