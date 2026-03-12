@@ -287,18 +287,33 @@ const Manifest = () => {
 
   const submitIdentityMetadata = async () => {
     if (!manifest?.manifest_id) return;
+    const nextManifestId = manifestIdDraft.trim();
+    const nextTruckId = truckIdDraft.trim();
+    const manifestChanged = nextManifestId !== (manifest.manifest_id || "");
+    const truckChanged = nextTruckId !== (manifest.truck_id || "");
+
+    if (!manifestChanged && !truckChanged) return;
+
     setSavingIdentity(true);
     try {
+      const body = {
+        manifest_id: manifest.manifest_id,
+      };
+
+      if (manifestChanged) {
+        body.manifest_id_new = nextManifestId;
+      }
+
+      if (truckChanged) {
+        body.truck_id = nextTruckId;
+      }
+
       const response = await fetch("/api/manifest/metadata", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          manifest_id: manifest.manifest_id,
-          manifest_id_new: manifestIdDraft,
-          truck_id: truckIdDraft,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -451,7 +466,13 @@ const Manifest = () => {
             <button
               type="button"
               onClick={submitIdentityMetadata}
-              disabled={savingIdentity || !manifestIdDraft.trim() || !truckIdDraft.trim()}
+              disabled={
+                savingIdentity ||
+                (!manifestIdDraft.trim() && manifestIdDraft !== (manifest.manifest_id || "")) ||
+                (!truckIdDraft.trim() && truckIdDraft !== (manifest.truck_id || "")) ||
+                (manifestIdDraft.trim() === (manifest.manifest_id || "") &&
+                  truckIdDraft.trim() === (manifest.truck_id || ""))
+              }
             >
               {savingIdentity ? "Saving..." : "Save IDs"}
             </button>
