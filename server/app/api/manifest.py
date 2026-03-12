@@ -724,18 +724,24 @@ def manifesto():
     limit = int(request.args.get("limit", "1"))
     include_machines = true_or_false(request.args.get("include_machines"))
     many = true_or_false(request.args.get("many"))
-    manifest_id = int(request.args.get("manifest_id", "0"))
+    manifest_id = str(request.args.get("manifest_id", "")).strip()
     
     query = db.session.query(Manifest)
     payload = {}
     
     if many:
         query = query.limit(limit)
-        machines = query.all()
-        payload["manifests"] = [m.serialize(include_machines=include_machines) for m in machines]
+        manifests = query.all()
+        payload["manifests"] = [m.serialize(include_machines=include_machines) for m in manifests]
     else:
-        machine = query.get(manifest_id)
-        payload["manifest"] = machine.serialize(include_machines=include_machines)
+        if not manifest_id:
+            return jsonify(success=False, message="manifest_id is required"), 400
+
+        manifest_row = query.filter_by(manifest_id=manifest_id).first()
+        if not manifest_row:
+            return jsonify(success=False, message="Manifest not found"), 404
+
+        payload["manifest"] = manifest_row.serialize(include_machines=include_machines)
         
     
         
