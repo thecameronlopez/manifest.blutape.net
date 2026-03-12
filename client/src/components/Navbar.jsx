@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import styles from "./Navbar.module.css";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../auth-context";
 
 const UploadIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -54,7 +54,7 @@ const Navbar = () => {
             aria-current={isActive ? "page" : undefined}
           >
             <span className={styles.icon}>
-              <Icon />
+              {Icon()}
             </span>
             <span className={styles.label}>{label}</span>
           </button>
@@ -65,3 +65,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

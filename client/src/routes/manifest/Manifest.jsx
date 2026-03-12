@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { FORMAT_PRICE, dollarsToCents } from "../../utils/tools";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../auth-context";
 
 const Manifest = () => {
   const navigate = useNavigate();
@@ -87,15 +87,25 @@ const Manifest = () => {
     window.print();
   };
 
+  const getPersistedMachineCents = (machine, key) =>
+    machine[key === "lowes_cents" ? "lowes_price" : "listed_price"] ?? null;
+
   const getEffectiveMachineCents = (machine, key) =>
-    prices[machine.id]?.[key] ?? machine[key === "lowes_cents" ? "lowes_price" : "listed_price"] ?? null;
+    prices[machine.id]?.[key] ?? getPersistedMachineCents(machine, key);
 
   const getMachineModelDisplay = (machine) =>
     machine.model || machine.sku || machine.serial || "-";
 
-  const isRowLocked = (machineId, lowesCents, listedCents) => {
-    const hasSubmittedBoth = lowesCents !== null && listedCents !== null;
-    return hasSubmittedBoth && !unlockedRows[machineId];
+  const isRowLocked = (machine, lowesCents, listedCents, rowIsEditing, rowIsDirty) => {
+    const hasSubmittedBoth =
+      getPersistedMachineCents(machine, "lowes_cents") !== null &&
+      getPersistedMachineCents(machine, "listed_cents") !== null;
+    return (
+      hasSubmittedBoth &&
+      !unlockedRows[machine.id] &&
+      !rowIsEditing &&
+      !rowIsDirty
+    );
   };
 
   const submitMachinePrices = async ({
@@ -126,6 +136,22 @@ const Manifest = () => {
       const savedMachine = data.payload.machine;
       setCents(machineId, "lowes_cents", savedMachine.lowes_price ?? null);
       setCents(machineId, "listed_cents", savedMachine.listed_price ?? null);
+      setManifest((prev) =>
+        prev
+          ? {
+              ...prev,
+              machines: prev.machines.map((machine) =>
+                machine.id === machineId
+                  ? {
+                      ...machine,
+                      lowes_price: savedMachine.lowes_price ?? null,
+                      listed_price: savedMachine.listed_price ?? null,
+                    }
+                  : machine,
+              ),
+            }
+          : prev,
+      );
       setUnlockedRows((prev) => ({ ...prev, [machineId]: false }));
       toast.success("Prices saved");
     } catch (error) {
@@ -165,6 +191,26 @@ const Manifest = () => {
         setCents(machine.id, "lowes_cents", machine.lowes_price ?? null);
         setCents(machine.id, "listed_cents", machine.listed_price ?? null);
       }
+      setManifest((prev) =>
+        prev
+          ? {
+              ...prev,
+              machines: prev.machines.map((machine) => {
+                const savedMachine = (data.payload.machines || []).find(
+                  (item) => item.id === machine.id,
+                );
+
+                if (!savedMachine) return machine;
+
+                return {
+                  ...machine,
+                  lowes_price: savedMachine.lowes_price ?? null,
+                  listed_price: savedMachine.listed_price ?? null,
+                };
+              }),
+            }
+          : prev,
+      );
       setUnlockedRows({});
       toast.success("All prices saved");
     } catch (error) {
@@ -437,10 +483,20 @@ const Manifest = () => {
 
         const lowesIsEditing = !!editing[lowesEditKey];
         const listedIsEditing = !!editing[listedEditKey];
+        const rowIsEditing = lowesIsEditing || listedIsEditing;
 
         const lowesCents = getEffectiveMachineCents(machine, "lowes_cents");
         const listedCents = getEffectiveMachineCents(machine, "listed_cents");
-        const rowLocked = isRowLocked(machineId, lowesCents, listedCents);
+        const rowIsDirty =
+          lowesCents !== getPersistedMachineCents(machine, "lowes_cents") ||
+          listedCents !== getPersistedMachineCents(machine, "listed_cents");
+        const rowLocked = isRowLocked(
+          machine,
+          lowesCents,
+          listedCents,
+          rowIsEditing,
+          rowIsDirty,
+        );
 
         const lowesDraft = prices[machineId]?.lowes_draft ?? "";
         const listedDraft = prices[machineId]?.listed_draft ?? "";

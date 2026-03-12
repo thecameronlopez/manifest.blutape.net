@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Navbar from "../components/Navbar";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../auth-context";
 
 const RootLayout = () => {
   const navigate = useNavigate();

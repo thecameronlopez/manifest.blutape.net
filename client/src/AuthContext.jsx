@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-
-const AuthContext = createContext(null);
+import React, { useEffect, useState } from "react";
+import { AuthContext } from "./auth-context";
 
 const ACCESS_TOKEN_PARAM = "access_token";
 
@@ -89,5 +88,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);

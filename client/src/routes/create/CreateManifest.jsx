@@ -2,7 +2,7 @@ import styles from "./CreateManifest.module.css";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../auth-context";
 
 const EMPTY_LINE = {
   sku: "",
@@ -226,3 +226,4 @@ const CreateManifest = () => {
 };
 
 export default CreateManifest;
+

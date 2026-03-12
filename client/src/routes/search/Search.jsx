@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FORMAT_DATE } from "../../utils/tools";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../auth-context";
 
 const Search = () => {
   const [manifests, setManifests] = useState(null);
