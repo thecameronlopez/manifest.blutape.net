@@ -14,8 +14,9 @@
   padding: 1rem;
   border-radius: 18px;
   border: 1px solid var(--card-border);
-  background: linear-gradient(160deg, var(--surface-1), var(--surface-2));
+  background: linear-gradient(160deg, var(--surface-2), var(--surface-1));
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(8px);
 }
 
 .completedManifestCard {
@@ -24,9 +25,14 @@
   gap: 1rem;
   padding: 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(15, 108, 115, 0.22);
+  border: 1px solid rgba(56, 72, 81, 0.26);
   background:
-    linear-gradient(135deg, rgba(15, 108, 115, 0.12), rgba(255, 255, 255, 0.74)),
+    linear-gradient(
+      205deg,
+      color-mix(in oklab, var(--accent-500), transparent 46%) 0%,
+      color-mix(in oklab, var(--brand-600), transparent 30%) 46%,
+      color-mix(in oklab, var(--surface-4), #e6f3ff 12%) 100%
+    ),
     var(--surface-3);
 }
 
@@ -47,10 +53,60 @@
   padding: 0.65rem 0.8rem;
   border-radius: 10px;
   border: 1px solid rgba(15, 108, 115, 0.16);
-  background: rgba(255, 255, 255, 0.48);
+  background: color-mix(in oklab, var(--surface-4), #fff 14%);
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--brand-600) !important;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.completedManifestCountLoading {
+  border-color: rgba(15, 108, 115, 0.28);
+  background: color-mix(in oklab, var(--surface-4), #e2fbff 16%);
+  color: #0f596a !important;
+}
+
+.completedManifestCountReady {
+  border-color: rgba(18, 110, 65, 0.25);
+  background: color-mix(in oklab, var(--surface-4), #e1ffe9 16%);
+  color: #145a35 !important;
+}
+
+.completedManifestCountError {
+  border-color: rgba(140, 24, 24, 0.38);
+  background: color-mix(in oklab, var(--surface-4), #ffe8e8 18%);
+  color: #7f1616 !important;
+}
+
+.countStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.13rem 0.44rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(22, 129, 143, 0.35);
+  color: #125d6a;
+  background: rgba(19, 163, 175, 0.1);
+}
+
+.retryCountButton {
+  margin-top: 0.52rem;
+  width: fit-content;
+  padding: 0.34rem 0.7rem;
+  border-radius: 999px;
+  border-color: rgba(122, 41, 41, 0.32);
+  background: color-mix(in oklab, #ffefef 76%, var(--surface-4) 24%);
+  color: #7a1010;
+  font-size: 0.76rem;
+  font-weight: 700;
+  min-height: 34px;
 }
 
 .completedManifestControls {
@@ -77,6 +133,7 @@
   background: var(--surface-4);
   color: var(--ink-900);
   outline: none;
+  min-height: 44px;
 }
 
 .completedManifestControls input:focus {
@@ -97,7 +154,7 @@
   padding: 0.65rem 0.7rem;
   border-radius: 12px;
   border: 1px solid rgba(56, 72, 81, 0.16);
-  background: var(--surface-3);
+  background: linear-gradient(155deg, var(--surface-3), var(--surface-4));
 }
 
 .templateRow p {
@@ -118,6 +175,7 @@
   background: var(--surface-4);
   color: var(--brand-600);
   text-decoration: none;
+  min-height: 42px;
 }
 
 .templateButton:hover {

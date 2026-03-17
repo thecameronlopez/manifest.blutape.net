@@ -7,13 +7,20 @@ import { useAuth } from "../../auth-context";
 
 const Search = () => {
   const [manifests, setManifests] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [statusLoadError, setStatusLoadError] = useState("");
   const [statusOptions, setStatusOptions] = useState([]);
   const [statusDrafts, setStatusDrafts] = useState({});
   const [moreOpen, setMoreOpen] = useState({});
   const [deletingId, setDeletingId] = useState(null);
   const [busyKeys, setBusyKeys] = useState({});
+  const [compactMode, setCompactMode] = useState(true);
   const navi = useNavigate();
   const { canManage } = useAuth();
+  const searchPageClass = `${styles.searchPage} ${
+    compactMode ? styles.compact : ""
+  }`;
 
   const setBusy = (key, value) => {
     setBusyKeys((prev) => ({ ...prev, [key]: value }));
@@ -39,22 +46,52 @@ const Search = () => {
 
   const loadManifests = async () => {
     try {
+      setLoading(true);
+      setPageError("");
+      setStatusLoadError("");
       const [manifestResponse, statusResponse] = await Promise.all([
         fetch("/api/manifest/?include_machines=false&many=true&limit=25"),
         fetch("/api/manifest/status_options"),
       ]);
-      const manifestData = await manifestResponse.json();
-      const statusData = await statusResponse.json();
-      if (!manifestData.success) {
-        throw new Error(manifestData.message || "There was an error");
-      }
-      if (!statusResponse.ok || !statusData.success) {
-        throw new Error(statusData.message || "Could not load status options");
+
+      let manifestData = null;
+      let statusData = null;
+
+      try {
+        const manifestText = await manifestResponse.text();
+        manifestData = manifestText ? JSON.parse(manifestText) : null;
+      } catch {
+        throw new Error("Could not parse manifest response");
       }
 
-      const loadedManifests = manifestData.payload.manifests || [];
+      if (!manifestResponse.ok || !manifestData?.success) {
+        throw new Error(
+          manifestData?.message ||
+            `Manifest list failed (HTTP ${manifestResponse.status})`,
+        );
+      }
+
+      try {
+        const statusText = await statusResponse.text();
+        statusData = statusText ? JSON.parse(statusText) : null;
+      } catch {
+        statusData = null;
+      }
+
+      if (!Array.isArray(manifestData.payload?.manifests)) {
+        throw new Error("Manifest payload was not in the expected format");
+      }
+
+      if (!statusResponse.ok || !statusData?.success) {
+        setStatusLoadError(
+          statusData?.message ||
+            `Status options unavailable (HTTP ${statusResponse.status})`,
+        );
+      }
+
+      const loadedManifests = manifestData.payload.manifests;
       setManifests(loadedManifests);
-      setStatusOptions(statusData.payload.status_options || []);
+      setStatusOptions(Array.isArray(statusData?.payload?.status_options) ? statusData.payload.status_options : []);
       setStatusDrafts(
         loadedManifests.reduce((acc, man) => {
           acc[man.id] = man.status || "";
@@ -63,7 +100,10 @@ const Search = () => {
       );
     } catch (error) {
       console.error("[ERROR]: ", error);
-      toast.error(error.message);
+      setPageError(error.message);
+      setManifests([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,12 +248,56 @@ const Search = () => {
     }
   };
 
-  if (!manifests) {
-    return <h1>Nope</h1>;
+  if (loading) {
+    return (
+      <div className={searchPageClass}>
+        <div className={styles.statePanel}>Loading manifests...</div>
+      </div>
+    );
+  }
+
+  if (pageError) {
+    return (
+      <div className={searchPageClass}>
+        <div className={styles.statePanel}>
+          <p>{pageError}</p>
+          <button type="button" onClick={loadManifests}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!manifests.length) {
+    return (
+      <div className={searchPageClass}>
+        <div className={styles.statePanel}>
+          <p>No manifests found right now.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className={styles.searchPage}>
+    <div className={searchPageClass}>
+      <div className={styles.layoutControls}>
+        <button
+          type="button"
+          className={`${styles.densityButton} ${
+            compactMode ? styles.densityButtonActive : ""
+          }`}
+          aria-pressed={compactMode}
+          onClick={() => setCompactMode((prev) => !prev)}
+        >
+          {compactMode ? "Compact: On" : "Compact: Off"}
+        </button>
+      </div>
+      {statusLoadError && (
+        <div className={styles.statePanel} role="status">
+          Status options are temporarily unavailable. Status updates may be limited.
+        </div>
+      )}
       {manifests.map((man, index) => (
         <div key={index} className={styles.manifestTile}>
           <div className={styles.manifestTileTop}>
@@ -224,20 +308,28 @@ const Search = () => {
             >
               {canManage ? (
                 <>
-                  <select
-                    className={`${styles.statusBadgeSelect} ${statusToneClass(statusValue(man))}`}
-                    id={`status_${man.id}`}
-                    value={statusValue(man)}
-                    onChange={(e) =>
-                      setStatusDrafts((prev) => ({ ...prev, [man.id]: e.target.value }))
-                    }
-                  >
-                    {statusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
+                  {statusOptions.length > 0 ? (
+                    <select
+                      className={`${styles.statusBadgeSelect} ${statusToneClass(statusValue(man))}`}
+                      id={`status_${man.id}`}
+                      value={statusValue(man)}
+                      onChange={(e) =>
+                        setStatusDrafts((prev) => ({ ...prev, [man.id]: e.target.value }))
+                      }
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className={`${styles.statusBadgeSelect} ${statusToneClass(statusValue(man))}`}
+                    >
+                      {statusValue(man)}
+                    </span>
+                  )}
                   {statusChanged(man) && (
                     <button
                       type="button"

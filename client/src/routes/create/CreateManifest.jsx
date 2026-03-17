@@ -23,6 +23,7 @@ const CreateManifest = () => {
   });
   const [lines, setLines] = useState([{ ...EMPTY_LINE }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const updateHeader = (e) => {
     const { name, value } = e.target;
@@ -46,10 +47,37 @@ const CreateManifest = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     if (!confirm("Create manifest from these line items?")) return;
 
     if (!header.truck_id || !header.manifest_id || !header.manufacturer) {
-      toast.error("Truck ID, Manifest ID, and Manufacturer are required");
+      setError("Truck ID, Manifest ID, and Manufacturer are required");
+      return;
+    }
+
+    const normalizedLines = lines
+      .map((line) => ({
+        sku: line.sku.trim(),
+        appliance_type: line.appliance_type.trim(),
+        description: line.description.trim(),
+        msrp: line.msrp.trim(),
+        your_cost: line.your_cost.trim(),
+      }))
+      .filter((line) =>
+        Object.values(line).some((value) => value.length > 0),
+      );
+
+    if (!normalizedLines.length) {
+      setError("Add at least one complete line item.");
+      return;
+    }
+
+    const isCompleteLine = (line) =>
+      line.sku && line.appliance_type && line.description && line.msrp && line.your_cost;
+    if (normalizedLines.some((line) => !isCompleteLine(line))) {
+      setError(
+        "Each line item must include SKU, Appliance Type, Description, MSRP, and Your Cost.",
+      );
       return;
     }
 
@@ -63,7 +91,7 @@ const CreateManifest = () => {
           manifest_id: header.manifest_id.trim(),
           manufacturer: header.manufacturer.trim(),
           truck_arrival_date: header.truck_arrival_date || null,
-          lines,
+          lines: normalizedLines,
         }),
       });
       const data = await response.json();
@@ -73,9 +101,11 @@ const CreateManifest = () => {
 
       toast.success(`Manifest ${data.payload.manifest_id} created`);
       navigate(`/manifest/${data.payload.id}`);
+      setError("");
     } catch (error) {
       console.error("[CREATE_MANIFEST_ERROR]:", error);
       toast.error(error.message || "Failed to create manifest");
+      setError(error.message || "Failed to create manifest");
     } finally {
       setIsSubmitting(false);
     }
@@ -220,6 +250,7 @@ const CreateManifest = () => {
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Creating..." : "Create Manifest"}
         </button>
+        {error && <p role="alert">{error}</p>}
       </form>
     </div>
   );

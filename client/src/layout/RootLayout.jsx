@@ -7,7 +7,10 @@ import { useAuth } from "../auth-context";
 const RootLayout = () => {
   const navigate = useNavigate();
   const { user, loading, error } = useAuth();
-  const fallbackBltapeUrl = "https://blutape.net";
+  const fallbackBltapeUrl =
+    import.meta.env.VITE_BLUTAPE_URL ||
+    import.meta.env.VITE_BLU_TAPE_URL ||
+    "https://blutape.net";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

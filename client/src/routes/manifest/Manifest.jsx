@@ -83,6 +83,30 @@ const Manifest = () => {
     setEditing((p) => ({ ...p, [editKey]: false }));
   };
 
+  const clearMachineDrafts = (machineId) => {
+    setPrices((prev) => {
+      const copy = { ...prev };
+      if (!copy[machineId]) return prev;
+
+      const { lowes_draft: _lowesDiscard, listed_draft: _listedDiscard, ...rest } =
+        copy[machineId];
+      return { ...copy, [machineId]: rest };
+    });
+  };
+
+  const toggleRowEditing = (machineId) => {
+    const isEditing = !!unlockedRows[machineId];
+    if (isEditing) {
+      setEditing((p) => ({
+        ...p,
+        [`${machineId}:lowes`]: false,
+        [`${machineId}:listed`]: false,
+      }));
+      clearMachineDrafts(machineId);
+    }
+    setUnlockedRows((prev) => ({ ...prev, [machineId]: !isEditing }));
+  };
+
   const printManifest = () => {
     window.print();
   };
@@ -389,7 +413,7 @@ const Manifest = () => {
     return () => clearTimeout(t);
   }, [manifest, searchParams]);
 
-  if (!manifest) return <h1>Nope</h1>;
+  if (!manifest) return <h1>No manifest found.</h1>;
 
   return (
     <div className={styles.manifestPage}>
@@ -511,18 +535,19 @@ const Manifest = () => {
         const rowIsDirty =
           lowesCents !== getPersistedMachineCents(machine, "lowes_cents") ||
           listedCents !== getPersistedMachineCents(machine, "listed_cents");
-        const rowLocked = isRowLocked(
-          machine,
-          lowesCents,
-          listedCents,
-          rowIsEditing,
-          rowIsDirty,
-        );
+            const rowLocked = isRowLocked(
+              machine,
+              lowesCents,
+              listedCents,
+              rowIsEditing,
+              rowIsDirty,
+            );
+            const rowUnlocked = !!unlockedRows[machineId];
 
-        const lowesDraft = prices[machineId]?.lowes_draft ?? "";
-        const listedDraft = prices[machineId]?.listed_draft ?? "";
+            const lowesDraft = prices[machineId]?.lowes_draft ?? "";
+            const listedDraft = prices[machineId]?.listed_draft ?? "";
 
-        return (
+            return (
           <div key={machineId} className={styles.manifestLineItem}>
             <h3>
               {machine.appliance_type}{" "}
@@ -666,23 +691,32 @@ const Manifest = () => {
                   }}
                 />
               </div>
-
-              {canManage &&
-                (rowLocked || (!rowIsEditing && !rowIsDirty) ? (
+              {canManage && (
+                <div className={styles.formActions}>
                   <button
                     type="button"
-                    onClick={() =>
-                      setUnlockedRows((prev) => ({ ...prev, [machineId]: true }))
-                    }
+                    className={`${styles.editToggleButton} ${
+                      rowUnlocked ? styles.editToggleButtonActive : ""
+                    }`}
+                    onClick={() => toggleRowEditing(machineId)}
                     disabled={!!saving[machineId]}
                   >
-                    Edit
+                    {rowUnlocked ? "Done" : "Edit"}
                   </button>
-                ) : (
-                  <button type="submit" disabled={!!saving[machineId]}>
-                    {saving[machineId] ? "Saving..." : "Submit"}
-                  </button>
-                ))}
+                  {rowUnlocked && (
+                    <button
+                      type="submit"
+                      className={styles.submitPriceButton}
+                      disabled={!!saving[machineId] || !rowIsDirty}
+                    >
+                      {saving[machineId] ? "Saving..." : "Save"}
+                    </button>
+                  )}
+                  {rowUnlocked && rowIsDirty && (
+                    <span className={styles.editingChip}>Editing active</span>
+                  )}
+                </div>
+              )}
             </form>
           </div>
         );

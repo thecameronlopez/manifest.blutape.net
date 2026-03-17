@@ -11,31 +11,39 @@
   gap: 0.9rem;
   padding: 1rem;
   border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: linear-gradient(160deg, var(--surface-1), var(--surface-2));
+  border: 1px solid rgba(56, 72, 81, 0.22);
+  background:
+    linear-gradient(160deg, var(--surface-2) 0%, var(--surface-1) 100%);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(8px);
 }
 
 .createForm button[type="submit"] {
   width: fit-content;
 }
 
+.createForm p[role="alert"] {
+  color: #8b1e1e;
+  font-weight: 700;
+}
+
 .headerFieldset {
   border-radius: 12px;
-  border: 1px solid rgba(56, 72, 81, 0.17);
+  border: 1px solid rgba(56, 72, 81, 0.2);
   padding: 0.85rem;
-  background: var(--surface-3);
+  background: linear-gradient(155deg, var(--surface-3), var(--surface-4));
 }
 
 .headerFieldset legend {
   color: var(--brand-600);
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 
 .headerGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.65rem;
 }
 
@@ -48,6 +56,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
+  min-width: 0;
 }
 
 .headerGrid input,
@@ -58,6 +67,14 @@
   border: 1px solid rgba(56, 72, 81, 0.22);
   padding: 0.54rem 0.62rem;
   background: var(--surface-4);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.headerGrid input:focus,
+.lineRow input:focus {
+  border-color: rgba(58, 168, 232, 0.6);
+  box-shadow: 0 0 0 3px rgba(58, 168, 232, 0.16);
+  outline: none;
 }
 
 .linesHeader {
@@ -67,12 +84,25 @@
 }
 
 .linesHeader h2 {
-  font-size: 1.1rem;
+  font-size: 1.07rem;
+  color: #f4faff;
+  text-shadow: 0 1px 0 rgba(4, 11, 34, 0.25);
 }
 
 .linesHeader button {
   font-size: 0.84rem;
   padding: 0.45rem 0.7rem;
+  min-height: 42px;
+  border-radius: 999px;
+  color: #0b1f46;
+  border-color: color-mix(in oklab, var(--brand-500), #fff 24%);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, #ffffff, var(--brand-500) 16%),
+    color-mix(in oklab, #c2e6ff, var(--brand-600) 12%)
+  );
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(3, 12, 36, 0.2);
 }
 
 .linesTable {
@@ -99,12 +129,22 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   font-weight: 700;
+  padding-bottom: 0.35rem;
 }
 
 .lineRow {
   border-radius: 10px;
-  border: 1px solid rgba(56, 72, 81, 0.14);
-  background: var(--surface-3);
+  border: 1px solid rgba(56, 72, 81, 0.17);
+  background: linear-gradient(
+    140deg,
+    var(--surface-3),
+    color-mix(in oklab, var(--surface-4), #e8f0ff 14%)
+  );
+  padding-block: 0.65rem;
+}
+
+.lineRow:hover {
+  border-color: rgba(58, 168, 232, 0.32);
 }
 
 .fieldCell {
@@ -126,15 +166,16 @@
 .removeLineButton {
   font-size: 0.74rem;
   padding: 0.45rem 0.4rem;
-  border: 1px solid rgba(132, 23, 23, 0.25);
-  background: rgba(255, 246, 246, 0.95);
-  color: #8f1f1f;
+  border: 1px solid rgba(132, 23, 23, 0.3);
+  background: linear-gradient(140deg, #ffecec, #ffc8c8);
+  color: #7a1515;
+  min-height: 42px;
 }
 
 .removeLineButton:hover {
-  background: #9f2727;
+  background: linear-gradient(140deg, #f58b8b, #d83d3d);
   color: #fff;
-  border-color: #9f2727;
+  border-color: rgba(216, 61, 61, 0.75);
 }
 
 @media (max-width: 980px) {

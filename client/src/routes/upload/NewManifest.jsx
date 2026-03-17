@@ -23,6 +23,7 @@ const NewManifest = () => {
     sourceDate: "",
     error: "",
   });
+  const [countRetryKey, setCountRetryKey] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -88,7 +89,9 @@ const NewManifest = () => {
       active = false;
       controller.abort();
     };
-  }, [buildSourceDate]);
+  }, [buildSourceDate, countRetryKey]);
+
+  const refreshCompletedCount = () => setCountRetryKey((prev) => prev + 1);
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -217,11 +220,23 @@ const NewManifest = () => {
               Leave the date blank to pull the previous workday. Use a specific
               date only for reruns or backfills.
             </p>
-            <p className={styles.completedManifestCount} aria-live="polite">
+            <p
+              className={`${styles.completedManifestCount} ${
+                completedCountState.error
+                  ? styles.completedManifestCountError
+                  : completedCountState.loading
+                    ? styles.completedManifestCountLoading
+                    : styles.completedManifestCountReady
+              }`}
+              aria-live="polite"
+            >
+              {completedCountState.loading && (
+                <span className={styles.countStatusBadge}>Checking</span>
+              )}
               {completedCountState.loading
                 ? "Checking completed machines..."
                 : completedCountState.error
-                  ? completedCountState.error
+                  ? `Unable to load completed-machine count right now. ${completedCountState.error}`
                   : `There ${
                       completedCountState.count === 1 ? "is" : "are"
                     } currently ${completedCountState.count} machine${
@@ -232,6 +247,15 @@ const NewManifest = () => {
                         : "the selected date"
                     }.`}
             </p>
+            {completedCountState.error && (
+              <button
+                type="button"
+                className={styles.retryCountButton}
+                onClick={refreshCompletedCount}
+              >
+                Retry Count
+              </button>
+            )}
           </div>
           <div className={styles.completedManifestControls}>
             <label htmlFor="build_source_date">Source Date (Optional)</label>

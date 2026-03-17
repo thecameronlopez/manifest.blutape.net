@@ -2,6 +2,42 @@ import React, { useEffect, useState } from "react";
 import { AuthContext } from "./auth-context";
 
 const ACCESS_TOKEN_PARAM = "access_token";
+const DEV_TOKEN_KEY = "manifest_dev_token";
+const DEV_HOSTS = ["localhost", "127.0.0.1", "::1"];
+
+const isLocalDevHost = () => {
+  if (!import.meta.env.DEV) return false;
+  return DEV_HOSTS.includes(window.location.hostname);
+};
+
+const buildDevUser = (token) => {
+  if (!token) return null;
+  const normalized = token.trim();
+
+  try {
+    const parsed = JSON.parse(normalized);
+    if (parsed && typeof parsed === "object" && parsed.role) {
+      return parsed;
+    }
+  } catch {
+    // Not JSON, continue with role shortcuts below.
+  }
+
+  const role =
+    normalized.toLowerCase() === "admin"
+      ? "admin"
+      : normalized.toLowerCase() === "manager"
+      ? "manager"
+      : "viewer";
+
+  return {
+    id: "dev-user",
+    name: "Dev User",
+    email: "dev@local.test",
+    role,
+    scope: "local-dev",
+  };
+};
 
 const removeAccessTokenFromUrl = () => {
   const url = new URL(window.location.href);
@@ -22,6 +58,17 @@ export const AuthProvider = ({ children }) => {
       try {
         setLoading(true);
         setError("");
+
+        if (isLocalDevHost()) {
+          const devToken = localStorage.getItem(DEV_TOKEN_KEY);
+          const devUser = buildDevUser(devToken);
+          if (devUser) {
+            if (!active) return;
+            setUser(devUser);
+            setLoading(false);
+            return;
+          }
+        }
 
         const params = new URLSearchParams(window.location.search);
         const accessToken = params.get(ACCESS_TOKEN_PARAM);
